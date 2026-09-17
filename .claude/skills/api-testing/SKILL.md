@@ -149,7 +149,7 @@ API tests live under `tests/api/`, separate from browser E2E specs under
 ```typescript
 import { test, expect } from '@playwright/test'
 import { CoinMarketCapClient } from '../../src/clients/coinmarketcap'
-import { readBtcPriceWindow } from '../../agents/btc-price-window/btcPriceWindow'
+import { readBtcPriceWindow } from '../../.agents/btc-price-window/btcPriceWindow'
 
 const apiKey = process.env.CMC_API_KEY
 const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
@@ -175,8 +175,8 @@ For assertions against a live, drifting value (e.g. a market price), don't
 hardcode a static threshold — it goes stale and forces manual updates. Instead:
 
 - Persist the expected `{ min, max }` range as JSON, read/written by a small
-  helper module (see `agents/btc-price-window/btcPriceWindow.ts`).
-- Add a Playwright `globalSetup` agent under `agents/<name>/` (wired via
+  helper module (see `.agents/btc-price-window/btcPriceWindow.ts`).
+- Add a Playwright `globalSetup` agent under `.agents/<name>/` (wired via
   `globalSetup` in [playwright.config.ts](../../playwright.config.ts)) that
   fetches the live value before tests run and, if it falls outside the
   persisted window, recenters the window around it — keeping `max - min`
@@ -185,5 +185,5 @@ hardcode a static threshold — it goes stale and forces manual updates. Instead
   it stays green as the underlying value drifts while still catching
   genuinely anomalous readings (outside the fixed-width window).
 
-See `agents/btc-price-window/self-heal-btc-price-window.ts` for the reference
+See `.agents/btc-price-window/self-heal-btc-price-window.ts` for the reference
 implementation.

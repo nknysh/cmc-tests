@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { CoinMarketCapClient } from '../../src/clients/coinmarketcap'
-import { readBtcPriceWindow } from '../../agents/btc-price-window/btcPriceWindow'
+import { readBtcPriceWindow } from '../../.agents/btc-price-window/btcPriceWindow'
 
 const apiKey = process.env.CMC_API_KEY
 const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()

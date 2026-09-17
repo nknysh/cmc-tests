@@ -26,13 +26,13 @@ jobs:
 
       - name: Commit healed window if changed
         run: |
-          if git diff --quiet -- agents/btc-price-window/btc-price-window.json; then
+          if git diff --quiet -- .agents/btc-price-window/btc-price-window.json; then
             echo "No change to BTC price window"
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add agents/btc-price-window/btc-price-window.json
+          git add .agents/btc-price-window/btc-price-window.json
           git commit -m "Self-heal BTC price window"
           git push
