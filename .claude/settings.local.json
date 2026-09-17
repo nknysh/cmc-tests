@@ -9,7 +9,8 @@
       "Bash(mkdir -p /Users/mykyta/Documents/repos/cmc-tests/tests/e2e /Users/mykyta/Documents/repos/cmc-tests/tests/fixtures)",
       "Bash(npx tsc *)",
       "Bash(npx playwright *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ],
     "additionalDirectories": [
       "/Users/mykyta/Documents/repos/cmc-tests/tests"
