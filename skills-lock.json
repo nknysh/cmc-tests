@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/e2e-testing/SKILL.md",
       "computedHash": "ae1a9cb885532edccb80682df28f269ada8bda86deedd00b282a82b03e011b2e"
+    },
+    "api-testing": {
+      "source": "skills/api-testing",
+      "sourceType": "local",
+      "skillPath": "skills/api-testing/SKILL.md",
+      "computedHash": "8c90ed96c889511eb057c45e6a0cd7e31dca1f578742cc0bdca0c12aad66c650"
     }
   }
 }
