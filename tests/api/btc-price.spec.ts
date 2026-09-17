@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { CoinMarketCapClient } from '../../src/clients/coinmarketcap'
+import { readBtcPriceWindow } from '../../agents/btc-price-window/btcPriceWindow'
 
-const BTC_PRICE_MIN = 70_000
-const BTC_PRICE_MAX = 80_000
 const apiKey = process.env.CMC_API_KEY
+const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
 
 test.describe('CoinMarketCap BTC Price', () => {
   test('BTC price is within expected range', async () => {

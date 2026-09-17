@@ -142,25 +142,48 @@ API tests live under `tests/api/`, separate from browser E2E specs under
 - Imports the client directly — no browser `page` fixture needed, so
   Playwright won't launch a browser for these tests.
 - Declares any threshold/expected-value constants at the top of the file,
-  named and explicit (e.g. `const BTC_PRICE_THRESHOLD = 30_000`), not
-  inlined into the assertion.
+  named and explicit, not inlined into the assertion.
+- Groups each spec's tests in a `test.describe()` with a meaningful name.
 - Uses one `test()` per behavior, asserting on the client's domain type:
 
 ```typescript
 import { test, expect } from '@playwright/test'
 import { CoinMarketCapClient } from '../../src/clients/coinmarketcap'
+import { readBtcPriceWindow } from '../../agents/btc-price-window/btcPriceWindow'
 
-const BTC_PRICE_THRESHOLD = 30_000
+const apiKey = process.env.CMC_API_KEY
+const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
 
-test('BTC price is above threshold', async () => {
-  const apiKey = process.env.CMC_API_KEY
-  expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
+test.describe('CoinMarketCap BTC Price', () => {
+  test('BTC price is within expected range', async () => {
+    expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
 
-  const client = new CoinMarketCapClient({ apiKey: apiKey! })
-  const btc = await client.fetchBtcPrice()
+    const client = new CoinMarketCapClient({ apiKey: apiKey! })
+    const btc = await client.fetchBtcPrice()
 
-  expect(btc.price).toBeGreaterThan(BTC_PRICE_THRESHOLD)
+    expect(btc.price).toBeGreaterThan(BTC_PRICE_MIN)
+    expect(btc.price).toBeLessThan(BTC_PRICE_MAX)
+  })
 })
 ```
 
 Run just the API suite with `npm run test:api`.
+
+## Self-Healing Value Windows
+
+For assertions against a live, drifting value (e.g. a market price), don't
+hardcode a static threshold — it goes stale and forces manual updates. Instead:
+
+- Persist the expected `{ min, max }` range as JSON, read/written by a small
+  helper module (see `agents/btc-price-window/btcPriceWindow.ts`).
+- Add a Playwright `globalSetup` agent under `agents/<name>/` (wired via
+  `globalSetup` in [playwright.config.ts](../../playwright.config.ts)) that
+  fetches the live value before tests run and, if it falls outside the
+  persisted window, recenters the window around it — keeping `max - min`
+  constant — and rewrites the JSON.
+- The spec reads the window via the helper instead of hardcoding bounds, so
+  it stays green as the underlying value drifts while still catching
+  genuinely anomalous readings (outside the fixed-width window).
+
+See `agents/btc-price-window/self-heal-btc-price-window.ts` for the reference
+implementation.
