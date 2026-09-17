@@ -1,0 +1,38 @@
+name: BTC Price Window Self-Heal
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - run: npx playwright test tests/api/btc-price.spec.ts
+        env:
+          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+
+      - name: Commit healed window if changed
+        run: |
+          if git diff --quiet -- agents/btc-price-window/btc-price-window.json; then
+            echo "No change to BTC price window"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add agents/btc-price-window/btc-price-window.json
+          git commit -m "Self-heal BTC price window"
+          git push
