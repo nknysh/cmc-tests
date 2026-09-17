@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx skills *)",
+      "Bash(npm -v)",
+      "Bash(git init *)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(mkdir -p /Users/mykyta/Documents/repos/cmc-tests/tests/e2e /Users/mykyta/Documents/repos/cmc-tests/tests/fixtures)",
+      "Bash(npx tsc *)",
+      "Bash(npx playwright *)",
+      "Bash(git add *)"
+    ],
+    "additionalDirectories": [
+      "/Users/mykyta/Documents/repos/cmc-tests/tests"
+    ]
+  }
+}

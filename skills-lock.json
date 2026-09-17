@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "e2e-testing": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/e2e-testing/SKILL.md",
+      "computedHash": "ae1a9cb885532edccb80682df28f269ada8bda86deedd00b282a82b03e011b2e"
+    }
+  }
+}
