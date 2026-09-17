@@ -59,6 +59,10 @@ Standard Playwright Page Object Model conventions apply; see the `e2e-testing` s
 
 Single `chromium` project, `fullyParallel: true`, retries/workers adjust based on `CI` env var, `testDir` covers both `tests/api` and `tests/e2e`. Reporters: HTML (`playwright-report/`) + list.
 
+## Git commits
+
+Do not add a `Co-Authored-By: Claude` trailer to commit messages — commits should read as authored solely by the user.
+
 ## Skills
 
 This repo has local skills wired up via `skills-lock.json` and symlinked into `.claude/skills/`:
