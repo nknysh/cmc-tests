@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { execSync } from 'node:child_process'
-import { CoinMarketCapClient } from '../../src/clients/coinmarketcap'
+import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { readBtcPriceWindow, writeBtcPriceWindow } from './btcPriceWindow'
 
 const WINDOW_JSON_GIT_PATH = '.agents/btc-price-window/btc-price-window.json'

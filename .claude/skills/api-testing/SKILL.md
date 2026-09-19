@@ -12,8 +12,8 @@ metadata:
 # API Client & Test Patterns
 
 Conventions for building a typed API client and testing it, derived from
-[src/clients/coinmarketcap](../../src/clients/coinmarketcap) and
-[tests/api/btc-price.spec.ts](../../tests/api/btc-price.spec.ts).
+[src/clients/coinmarketcap](../../../src/clients/coinmarketcap) and
+[tests/api/btc-price.spec.ts](../../../tests/api/btc-price.spec.ts).
 
 ## Client Folder Layout
 
@@ -137,7 +137,7 @@ expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
 
 API tests live under `tests/api/`, separate from browser E2E specs under
 `tests/e2e/` (both covered by `testDir: './tests'` in
-[playwright.config.ts](../../playwright.config.ts)). An API spec:
+[playwright.config.ts](../../../playwright.config.ts)). An API spec:
 
 - Imports the client directly — no browser `page` fixture needed, so
   Playwright won't launch a browser for these tests.
@@ -148,8 +148,8 @@ API tests live under `tests/api/`, separate from browser E2E specs under
 
 ```typescript
 import { test, expect } from '@playwright/test'
-import { CoinMarketCapClient } from '../../src/clients/coinmarketcap'
-import { readBtcPriceWindow } from '../../.agents/btc-price-window/btcPriceWindow'
+import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
+import { readBtcPriceWindow } from '@agents/btc-price-window/btcPriceWindow'
 
 const apiKey = process.env.CMC_API_KEY
 const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
@@ -229,7 +229,7 @@ hardcode a static threshold — it goes stale and forces manual updates. Instead
 - Persist the expected `{ min, max }` range as JSON, read/written by a small
   helper module (see `.agents/btc-price-window/btcPriceWindow.ts`).
 - Add a Playwright `globalSetup` agent under `.agents/<name>/` (wired via
-  `globalSetup` in [playwright.config.ts](../../playwright.config.ts)) that
+  `globalSetup` in [playwright.config.ts](../../../playwright.config.ts)) that
   fetches the live value before tests run and, if it falls outside the
   persisted window, recenters the window around it — keeping `max - min`
   constant — and rewrites the JSON.

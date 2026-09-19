@@ -8,7 +8,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": ["node", "@playwright/test"]
+    "types": ["node", "@playwright/test"],
+    "paths": {
+      "@src/*": ["./src/*"],
+      "@tests/*": ["./tests/*"],
+      "@agents/*": ["./.agents/*"]
+    }
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", ".agents/**/*.ts", "playwright.config.ts"]
 }
