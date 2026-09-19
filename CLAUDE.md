@@ -48,7 +48,7 @@ See `src/clients/coinmarketcap/` as the reference implementation, and `.claude/s
 
 - Imports the client directly — no `page` fixture, so Playwright doesn't launch a browser for these.
 - Reads required env vars and asserts they're present (`expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()`) before constructing the client, so a missing key fails clearly instead of erroring deep inside an API call.
-- Declares threshold/expected-value constants at the top of the file, named and explicit, rather than inlined into assertions.
+- Declares threshold/expected-value constants at the top of the file, named and explicit, rather than inlined into assertions. Exception: `btc-price.spec.ts` reads its min/max bounds from the self-healing window file below instead of hardcoding them, since the bounds are expected to move over time.
 - One `test()` per behavior, asserting on the client's domain type (not the raw response).
 
 ### E2E test pattern (`tests/e2e/`)
@@ -57,7 +57,15 @@ Standard Playwright Page Object Model conventions apply; see the `e2e-testing` s
 
 ### Playwright config
 
-Single `chromium` project, `fullyParallel: true`, retries/workers adjust based on `CI` env var, `testDir` covers both `tests/api` and `tests/e2e`. Reporters: HTML (`playwright-report/`) + list.
+Single `chromium` project, `fullyParallel: true`, retries/workers adjust based on `CI` env var, `testDir` covers both `tests/api` and `tests/e2e`. Reporters: HTML (`playwright-report/`) + list. `globalSetup` runs the self-healing BTC price window (below) before every test session.
+
+### Self-healing BTC price window (`.agents/btc-price-window/`)
+
+`tests/api/btc-price.spec.ts` asserts live BTC price falls within a `[min, max]` window persisted in `.agents/btc-price-window/btc-price-window.json` (read/written via `btcPriceWindow.ts`), rather than a hardcoded range — BTC price drifts too much for a fixed threshold to stay meaningful.
+
+- `self-heal-btc-price-window.ts` is wired as Playwright's `globalSetup`. On every run it fetches the live price; if it falls outside the current window it recentres the window (same width, shifted to the new price) and commits the updated JSON. In CI it scopes a throwaway `github-actions[bot]` git identity to that one commit rather than touching any configured identity.
+- `.github/workflows/btc-price-window-heal.yml` runs this daily via cron (plus `workflow_dispatch`), executing `tests/api/btc-price.spec.ts` (which triggers the same `globalSetup` heal) and pushing the commit if the window changed.
+- Net effect: the window self-adjusts to track price drift instead of the test needing manual threshold updates.
 
 ## Git commits
 
