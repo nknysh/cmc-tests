@@ -169,6 +169,58 @@ test.describe('CoinMarketCap BTC Price', () => {
 
 Run just the API suite with `npm run test:api`.
 
+## Parameterized Testing
+
+When the same behavior must hold across several inputs (multiple symbols,
+multiple error codes, multiple currencies), don't copy-paste a `test()`
+block per value. Playwright has no built-in `test.each`, so parameterize
+with a plain `for...of` loop over a named, typed table, calling `test()`
+once per row:
+
+```typescript
+const SYMBOLS: readonly string[] = ['BTC', 'ETH', 'SOL']
+
+for (const symbol of SYMBOLS) {
+  test(`fetches a positive price for ${symbol}`, async () => {
+    const client = new CoinMarketCapClient({ apiKey: apiKey! })
+    const quote = await client.fetchPrice(symbol)
+
+    expect(quote.price).toBeGreaterThan(0)
+  })
+}
+```
+
+For a table of related fixture + expectation, use an array of objects
+instead of parallel arrays, and destructure it into the test name so a
+failure identifies which row broke without opening the report:
+
+```typescript
+const CASES: readonly { symbol: string; expectedCurrency: string }[] = [
+  { symbol: 'BTC', expectedCurrency: 'USD' },
+  { symbol: 'ETH', expectedCurrency: 'USD' },
+]
+
+for (const { symbol, expectedCurrency } of CASES) {
+  test(`${symbol} quote is denominated in ${expectedCurrency}`, async () => {
+    const client = new CoinMarketCapClient({ apiKey: apiKey! })
+    const quote = await client.fetchPrice(symbol)
+
+    expect(quote.currency).toBe(expectedCurrency)
+  })
+}
+```
+
+The loop runs at file-load time, so each row becomes its own named test in
+the Playwright report — not a single test that loops internally and hides
+which case failed. Combine with `test-design`'s equivalence-class and
+boundary-value guidance to choose the rows: one per partition, plus the
+edge values, rather than every input you can think of.
+
+Keep the table small and declared as a `const` near the top of the file,
+same as any other threshold constant — if the table grows large enough to
+need its own file, it likely belongs next to the client as fixture data
+rather than inline in the spec.
+
 ## Self-Healing Value Windows
 
 For assertions against a live, drifting value (e.g. a market price), don't
