@@ -181,6 +181,11 @@ hardcode a static threshold — it goes stale and forces manual updates. Instead
   fetches the live value before tests run and, if it falls outside the
   persisted window, recenters the window around it — keeping `max - min`
   constant — and rewrites the JSON.
+- After rewriting, the agent commits just that JSON file (`git add` +
+  `git commit`, no push) so the healed window is captured automatically. It
+  uses the caller's own git identity locally; in CI (`process.env.CI`) it
+  scopes a `github-actions[bot]` identity to that one commit via `git -c`
+  instead of mutating global/local git config.
 - The spec reads the window via the helper instead of hardcoding bounds, so
   it stays green as the underlying value drifts while still catching
   genuinely anomalous readings (outside the fixed-width window).
