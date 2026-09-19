@@ -73,6 +73,62 @@ prefer a self-adjusting bound over a value that silently goes stale — see
 the BTC price window in `.agents/btc-price-window/` for the pattern used in
 this repo.
 
+## Equivalence Class Partitioning
+
+Split the input space into partitions that should behave the same way, and
+test one representative value per partition instead of enumerating every
+possible input. Each partition is a bet: "every value in here should
+produce the same kind of result." One test per partition catches the same
+bugs as testing every value in it, at a fraction of the cost.
+
+For `fetchBtcPrice`-style inputs, typical partitions are:
+- valid input that should succeed (e.g. a recognized symbol like `BTC`)
+- invalid input that should be rejected (e.g. an empty or unrecognized
+  symbol)
+- input the client can't validate itself and must delegate to the API
+  (e.g. a symbol that's syntactically fine but doesn't exist upstream)
+
+```typescript
+// One test per partition, not one test per possible symbol
+test('fetches price for a valid, known symbol', async () => { ... })
+test('rejects an empty symbol before making a request', async () => { ... })
+test('surfaces the API error for an unknown symbol', async () => { ... })
+```
+
+Resist the urge to add a second test within a partition "just in case" —
+if two inputs are in the same equivalence class, a second test only proves
+the first one wasn't a fluke, which redundancy is rarely worth the added
+maintenance.
+
+## Boundary Value Analysis
+
+Bugs cluster at the edges of a valid range, not in its middle — off-by-one
+errors in `<` vs `<=`, unhandled zero/negative values, truncation at a
+limit. For a range check, test the boundary itself and the value
+immediately on each side of it, rather than a value picked from the
+middle of the range.
+
+For a bound `min < price < max` (strict, as in `btc-price.spec.ts`), the
+values worth asserting on are:
+
+| Value         | Expected  | Why it matters                          |
+|---------------|-----------|------------------------------------------|
+| `min - 1`     | fail      | just outside the lower bound             |
+| `min`         | fail      | the bound itself — exposed if `<` becomes `<=` |
+| `min + 1`     | pass      | just inside the lower bound              |
+| `max - 1`     | pass      | just inside the upper bound              |
+| `max`         | fail      | the bound itself — exposed if `<` becomes `<=` |
+| `max + 1`     | fail      | just outside the upper bound             |
+
+A test suite that only ever checks a comfortably mid-range value (e.g. the
+current live price) will never catch the bound being flipped from
+exclusive to inclusive, or a fencepost error in code that computes the
+window (see `self-heal-btc-price-window.ts`, which derives `newMax` from
+`newMin + width`). Where the value under test is easy to control directly
+(e.g. testing the window math itself, or a client method that accepts a
+price), assert on the boundary values explicitly rather than relying on
+whatever the live external value happens to be that day.
+
 ## Fail Clearly, Not Deep
 
 Validate preconditions (required env vars, fixtures, auth) at the top of
