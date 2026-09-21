@@ -30,7 +30,7 @@ const FULL_PAGE_TABS: readonly { index: NavTabIndex; label: string; expectedPath
   { index: 'tab-bstocks', label: 'bStocks', expectedPath: '/view/bstocks/' },
 ]
 
-test.describe('CoinMarketCap homepage first-level navigation', () => {
+test.describe('CoinMarketCap homepage first-level navigation', { tag: '@navigation' }, () => {
   test('exposes all expected first-level tabs', async ({ page }) => {
     const home = new CoinMarketCapHomePage(page)
     await home.goto()

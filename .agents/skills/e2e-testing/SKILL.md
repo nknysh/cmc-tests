@@ -98,6 +98,29 @@ test.describe('Item Search', () => {
 })
 ```
 
+## Tags
+
+Tag `describe` blocks (and individual tests, for finer-grained filtering)
+with a short `@name` indicating what's inside, so CI or a local run can
+select a slice without editing the file:
+
+```typescript
+test.describe('Item Search', { tag: '@search' }, () => {
+  test('should search by keyword', async ({ page }) => { /* ... */ })
+
+  test('flaky: handles slow network', { tag: '@flaky' }, async ({ page }) => {
+    // tags on an individual test add to, not replace, the describe's tags
+  })
+})
+```
+
+Run a tagged subset with `--grep`/`--grep-invert`:
+
+```bash
+npx playwright test --grep @search
+npx playwright test --grep-invert @flaky
+```
+
 ## Playwright Configuration
 
 ```typescript

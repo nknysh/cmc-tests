@@ -57,7 +57,7 @@ Standard Playwright Page Object Model conventions apply; see the `e2e-testing` s
 
 ### Playwright config
 
-Single `chromium` project, `fullyParallel: true`, retries/workers adjust based on `CI` env var, `testDir` covers both `tests/api` and `tests/e2e`. Reporters: HTML (`playwright-report/`) + list. `globalSetup` runs the self-healing BTC price window (below) before every test session.
+Two projects: `api` (`testDir: tests/api`, no browser) and `e2e` (`testDir: tests/e2e`, Desktop Chrome). `npm run test:api`/`test:e2e` filter via `--project`. `fullyParallel: true`, retries/workers adjust based on `CI` env var. Reporters: HTML (`playwright-report/`) + list. `globalSetup` runs the self-healing BTC price window (below) before every test session.
 
 ### Self-healing BTC price window (`.agents/btc-price-window/`)
 

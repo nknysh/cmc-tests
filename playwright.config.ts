@@ -2,7 +2,6 @@ import { defineConfig, devices } from '@playwright/test'
 import 'dotenv/config'
 
 export default defineConfig({
-  testDir: './tests',
   globalSetup: './.agents/btc-price-window/self-heal-btc-price-window.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -21,6 +20,7 @@ export default defineConfig({
     navigationTimeout: 30000,
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'api', testDir: './tests/api' },
+    { name: 'e2e', testDir: './tests/e2e', use: { ...devices['Desktop Chrome'] } },
   ],
 })

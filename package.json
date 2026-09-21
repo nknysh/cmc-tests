@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "test:api": "playwright test tests/api",
-    "test:e2e": "playwright test tests/e2e",
+    "test:api": "playwright test --project=api",
+    "test:e2e": "playwright test --project=e2e",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report"
