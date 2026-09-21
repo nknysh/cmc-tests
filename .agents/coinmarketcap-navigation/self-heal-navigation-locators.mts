@@ -52,6 +52,13 @@ function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
   }
   for (const suite of report.suites ?? []) walk(suite)
 
+  // Printed unconditionally (not just the count) - without this, a CI failure
+  // is undebuggable after the fact: the workflow doesn't upload the JSON report,
+  // so the console log is the only record of which test broke and why.
+  for (const failure of failures) {
+    console.log(`[coinmarketcap-navigation]   ✗ ${failure.title}\n${failure.error.slice(0, 500)}`)
+  }
+
   return { passed: failures.length === 0, failures }
 }
 
@@ -223,10 +230,13 @@ async function main(): Promise<void> {
   const patchedSource = await proposeFix({ pageObjectSource: originalSource, errorSummary, liveSnapshot })
 
   if (patchedSource === originalSource) {
-    console.error('[coinmarketcap-navigation] Claude proposed no change; leaving failure for a human')
+    console.error('[coinmarketcap-navigation] local model proposed no change; leaving failure for a human')
     process.exitCode = 1
     return
   }
+
+  console.log('[coinmarketcap-navigation] proposed patch:')
+  console.log(patchedSource)
 
   fs.writeFileSync(PAGE_OBJECT_PATH, patchedSource)
 
