@@ -1,0 +1,31 @@
+name: CoinMarketCap Navigation Self-Heal
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: node .agents/coinmarketcap-navigation/self-heal-navigation-locators.mts
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BASE_URL: https://coinmarketcap.com
+
+      - name: Push healed locator if changed
+        run: git push

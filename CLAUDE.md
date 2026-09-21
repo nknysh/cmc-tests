@@ -30,6 +30,7 @@ There is no lint script configured.
 - Copy `.env.example` to `.env` and set `CMC_API_KEY` (a CoinMarketCap Pro API key) before running API tests.
 - `playwright.config.ts` loads `.env` once via `import 'dotenv/config'` at the top, so `process.env.X` is populated in every test.
 - `BASE_URL` env var overrides the Playwright `baseURL` (defaults to `http://localhost:3000`) — only relevant for E2E specs that navigate relative paths.
+- `ANTHROPIC_API_KEY` is only needed to run the CoinMarketCap navigation self-heal agent below, not for the test suite itself.
 
 ## Architecture
 
@@ -66,6 +67,16 @@ Two projects: `api` (`testDir: tests/api`, no browser) and `e2e` (`testDir: test
 - `self-heal-btc-price-window.ts` is wired as Playwright's `globalSetup`. On every run it fetches the live price; if it falls outside the current window it recentres the window (same width, shifted to the new price) and commits the updated JSON. In CI, where there's no configured git identity, it scopes the repo owner's identity to that one commit rather than touching any configured identity.
 - `.github/workflows/btc-price-window-heal.yml` runs this every 4 hours via cron (plus `workflow_dispatch`), executing `tests/api/btc-price.spec.ts` (which triggers the same `globalSetup` heal) and pushing the commit if the window changed.
 - Net effect: the window self-adjusts to track price drift instead of the test needing manual threshold updates.
+
+### Self-healing CoinMarketCap navigation locators (`.agents/coinmarketcap-navigation/`)
+
+`self-heal-navigation-locators.mts` is a standalone script (not wired into Playwright — it runs the suite itself as a subprocess) that keeps `tests/e2e/pages/CoinMarketCapHomePage.ts` working when the live site's markup changes:
+
+- Runs `--project=e2e` and inspects the JSON report. If everything passed, it exits immediately.
+- If a failure's error text looks locator-related (`waiting for locator`, `strict mode violation`, etc.) rather than a genuine assertion/business-logic failure, it opens the live site, captures a fresh ARIA snapshot of the nav area, and sends the current page object source + the error + that snapshot to Claude (`claude-opus-5`), asking for the complete corrected file back.
+- Writes the proposed file, re-runs the suite to verify the fix actually resolves the failure, and only then commits (reverting otherwise). Uses the same repo-owner CI git identity as the BTC price window agent.
+- A non-locator failure (a real behavioral regression) is deliberately left alone — it's not something an LLM patch should paper over — and the script exits non-zero so a human notices.
+- `.github/workflows/coinmarketcap-navigation-heal.yml` runs this daily via cron (plus `workflow_dispatch`); needs the `ANTHROPIC_API_KEY` secret set in the repo (not configured by this change — add it in GitHub repo settings before the workflow can do anything beyond the CMC_API_KEY-only paths).
 
 ## Git commits
 
