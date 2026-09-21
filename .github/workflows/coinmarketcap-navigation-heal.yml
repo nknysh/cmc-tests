@@ -22,9 +22,14 @@ jobs:
 
       - run: npx playwright install --with-deps chromium
 
+      - name: Cache local GGUF model
+        uses: actions/cache@v4
+        with:
+          path: .agents/coinmarketcap-navigation/models
+          key: qwen2.5-coder-7b-instruct-q4_k_m-gguf
+
       - run: node .agents/coinmarketcap-navigation/self-heal-navigation-locators.mts
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BASE_URL: https://coinmarketcap.com
 
       - name: Push healed locator if changed

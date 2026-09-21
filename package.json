@@ -24,7 +24,10 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.127.0",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "node-llama-cpp": "^3.21.1"
+  },
+  "allowScripts": {
+    "node-llama-cpp@3.21.1": true
   }
 }

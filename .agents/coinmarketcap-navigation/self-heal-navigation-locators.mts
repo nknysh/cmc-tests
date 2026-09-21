@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { chromium } from '@playwright/test'
-import Anthropic from '@anthropic-ai/sdk'
+import { getLlama, resolveModelFile, LlamaChatSession } from 'node-llama-cpp'
 
 // Assumes invocation from the repo root (true for both the CI workflow and
 // local `node .agents/coinmarketcap-navigation/self-heal-navigation-locators.mts`).
@@ -11,7 +11,10 @@ const REPO_ROOT = process.cwd()
 const PAGE_OBJECT_GIT_PATH = 'tests/e2e/pages/CoinMarketCapHomePage.ts'
 const PAGE_OBJECT_PATH = path.join(REPO_ROOT, PAGE_OBJECT_GIT_PATH)
 const JSON_REPORT_PATH = path.join(REPO_ROOT, '.agents/coinmarketcap-navigation/last-run.json')
-const MODEL = 'claude-opus-5'
+
+// Runs fully offline via node-llama-cpp; downloaded once (~4.7GB) to MODELS_DIR on first use.
+const MODEL_URI = 'hf:Qwen/Qwen2.5-Coder-7B-Instruct-GGUF:Q4_K_M'
+const MODELS_DIR = path.join(REPO_ROOT, '.agents/coinmarketcap-navigation/models')
 
 interface TestFailure {
   title: string
@@ -60,6 +63,34 @@ function isLocatorFailure(failure: TestFailure): boolean {
   )
 }
 
+// A plain ARIA snapshot (roles/names only) never carries the raw HTML
+// attributes (data-test, data-index, ...) that this site's selectors key
+// off, so it can't tell the model what a renamed attribute's new value is.
+// Serialize actual tag + attributes + text instead, dropping only class/style
+// (hashed per-deploy, pure noise for selector repair).
+function serializeElement(root: Element): string {
+  const KEEP_ATTRS = /^(data-|aria-|role$|id$|href$)/
+  const serialize = (el: Element, depth: number): string => {
+    if (depth > 8) return ''
+    const tag = el.tagName.toLowerCase()
+    const attrs = Array.from(el.attributes)
+      .filter(a => KEEP_ATTRS.test(a.name))
+      .map(a => `${a.name}="${a.value}"`)
+      .join(' ')
+    const openTag = attrs ? `<${tag} ${attrs}>` : `<${tag}>`
+    const directText = Array.from(el.childNodes)
+      .filter(n => n.nodeType === Node.TEXT_NODE)
+      .map(n => n.textContent?.trim())
+      .filter(Boolean)
+      .join(' ')
+    const children = Array.from(el.children)
+      .map(c => serialize(c, depth + 1))
+      .join('')
+    return `${openTag}${directText}${children}</${tag}>`
+  }
+  return serialize(root, 0)
+}
+
 async function captureLiveContext(): Promise<string> {
   const browser = await chromium.launch()
   try {
@@ -68,19 +99,26 @@ async function captureLiveContext(): Promise<string> {
 
     const navHeader = page.locator('[data-test="homepage-table-header"]')
     if ((await navHeader.count()) > 0) {
-      return await navHeader.first().ariaSnapshot()
+      return (await navHeader.first().evaluate(serializeElement)).slice(0, 20000)
     }
 
     // The container itself may be what broke; fall back to a wider capture.
     const header = page.locator('header').first()
     if ((await header.count()) > 0) {
-      return (await header.ariaSnapshot()).slice(0, 20000)
+      return (await header.evaluate(serializeElement)).slice(0, 20000)
     }
 
-    return (await page.locator('body').ariaSnapshot()).slice(0, 20000)
+    return (await page.locator('body').evaluate(serializeElement)).slice(0, 20000)
   } finally {
     await browser.close()
   }
+}
+
+// Local models are less reliable than Claude about honoring "no markdown fences" -
+// strip a leading/trailing ```-fence if the model wrapped its answer in one anyway.
+function stripCodeFence(text: string): string {
+  const fenced = text.trim().match(/^```(?:\w+)?\n([\s\S]*?)\n```$/)
+  return fenced ? fenced[1].trim() : text.trim()
 }
 
 async function proposeFix(params: {
@@ -88,48 +126,53 @@ async function proposeFix(params: {
   errorSummary: string
   liveSnapshot: string
 }): Promise<string> {
-  const client = new Anthropic()
+  const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
 
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 8000,
-    system: [
-      'You repair a broken Playwright Page Object for the live CoinMarketCap website',
-      '(coinmarketcap.com) after its DOM changed and a locator no longer matches.',
-      'You are given the current TypeScript source of the page object, the Playwright',
-      'error(s) from the failing test(s), and a fresh ARIA snapshot of the live page in',
-      'the area the locators target.',
-      'Reply with ONLY the complete corrected TypeScript file contents, no markdown',
-      'fences and no commentary before or after. Change only what is broken (selectors',
-      'that no longer resolve); preserve everything else exactly, including the existing',
-      'code style (no semicolons, single quotes, 2-space indent).',
-    ].join(' '),
-    messages: [
-      {
-        role: 'user',
-        content: [
-          '## Failing test error(s)',
-          '```',
-          params.errorSummary,
-          '```',
-          '',
-          '## Live page ARIA snapshot (area the locators target)',
-          '```yaml',
-          params.liveSnapshot,
-          '```',
-          '',
-          '## Current page object source',
-          '```typescript',
-          params.pageObjectSource,
-          '```',
-        ].join('\n'),
-      },
-    ],
-  })
+  const llama = await getLlama()
+  const model = await llama.loadModel({ modelPath })
+  const context = await model.createContext({ contextSize: 8192 })
 
-  const text = response.content.find((block): block is Anthropic.TextBlock => block.type === 'text')
-  if (!text) throw new Error('Claude returned no text content')
-  return text.text.trim()
+  try {
+    const session = new LlamaChatSession({
+      contextSequence: context.getSequence(),
+      systemPrompt: [
+        'You repair a broken Playwright Page Object for the live CoinMarketCap website',
+        '(coinmarketcap.com) after its DOM changed and a locator no longer matches.',
+        'You are given the current TypeScript source of the page object, the Playwright',
+        'error(s) from the failing test(s), and a fresh ARIA snapshot of the live page in',
+        'the area the locators target.',
+        'Reply with ONLY the complete corrected TypeScript file contents, no markdown',
+        'fences and no commentary before or after. Change only what is broken (selectors',
+        'that no longer resolve); preserve everything else exactly, including the existing',
+        'code style (no semicolons, single quotes, 2-space indent).',
+      ].join(' '),
+    })
+
+    const response = await session.prompt(
+      [
+        '## Failing test error(s)',
+        '```',
+        params.errorSummary,
+        '```',
+        '',
+        '## Live page ARIA snapshot (area the locators target)',
+        '```yaml',
+        params.liveSnapshot,
+        '```',
+        '',
+        '## Current page object source',
+        '```typescript',
+        params.pageObjectSource,
+        '```',
+      ].join('\n')
+    )
+
+    return stripCodeFence(response)
+  } finally {
+    await context.dispose()
+    await model.dispose()
+    await llama.dispose()
+  }
 }
 
 function commitHealedLocator(): void {

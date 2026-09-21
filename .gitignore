@@ -5,3 +5,4 @@ test-results/
 *.log
 .env
 .agents/coinmarketcap-navigation/last-run.json
+.agents/coinmarketcap-navigation/models/
