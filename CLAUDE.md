@@ -64,7 +64,7 @@ Two projects: `api` (`testDir: tests/api`, no browser) and `e2e` (`testDir: test
 `tests/api/btc-price.spec.ts` asserts live BTC price falls within a `[min, max]` window persisted in `.agents/btc-price-window/btc-price-window.json` (read/written via `btcPriceWindow.ts`), rather than a hardcoded range — BTC price drifts too much for a fixed threshold to stay meaningful.
 
 - `self-heal-btc-price-window.ts` is wired as Playwright's `globalSetup`. On every run it fetches the live price; if it falls outside the current window it recentres the window (same width, shifted to the new price) and commits the updated JSON. In CI it scopes a throwaway `github-actions[bot]` git identity to that one commit rather than touching any configured identity.
-- `.github/workflows/btc-price-window-heal.yml` runs this daily via cron (plus `workflow_dispatch`), executing `tests/api/btc-price.spec.ts` (which triggers the same `globalSetup` heal) and pushing the commit if the window changed.
+- `.github/workflows/btc-price-window-heal.yml` runs this every 4 hours via cron (plus `workflow_dispatch`), executing `tests/api/btc-price.spec.ts` (which triggers the same `globalSetup` heal) and pushing the commit if the window changed.
 - Net effect: the window self-adjusts to track price drift instead of the test needing manual threshold updates.
 
 ## Git commits

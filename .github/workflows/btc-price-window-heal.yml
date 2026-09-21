@@ -2,7 +2,7 @@ name: BTC Price Window Self-Heal
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 */4 * * *'
   workflow_dispatch:
 
 permissions:
