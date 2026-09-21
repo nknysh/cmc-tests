@@ -35,7 +35,13 @@ test.describe('CoinMarketCap homepage first-level navigation', { tag: '@navigati
     const home = new CoinMarketCapHomePage(page)
     await home.goto()
 
-    await expect(home.navTabs).toHaveCount(ALL_TABS.length)
+    // CoinMarketCap ships nav-tab experiments (e.g. a "Prediction Markets" tab
+    // appeared mid-development of this suite), so the live tab count can run
+    // ahead of ALL_TABS. Assert the known tabs are present rather than an
+    // exact count, so a site-side experiment doesn't fail this test - only a
+    // genuinely missing tab should. expect.poll (not a one-shot check) keeps
+    // the same auto-retry tolerance toHaveCount would have given a slow page.
+    await expect.poll(() => home.navTabs.count()).toBeGreaterThanOrEqual(ALL_TABS.length)
 
     for (const { index, label } of ALL_TABS) {
       await expect(home.tab(index)).toBeVisible()

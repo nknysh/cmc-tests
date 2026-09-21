@@ -65,6 +65,15 @@ function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
 // Distinguishes a stale-selector failure (worth self-healing) from a genuine
 // assertion/business-logic failure (not something an LLM should paper over).
 function isLocatorFailure(failure: TestFailure): boolean {
+  // Playwright prints "waiting for locator(...)" as call-log boilerplate on
+  // *every* locator-based assertion timeout, including a toHaveCount() that
+  // resolved fine but got a different (nonzero) count than expected - e.g.
+  // the live site added a nav tab. That's page content drift, not a broken
+  // selector, and rewriting the selector can't fix it - only editing the
+  // test's expectation can, which is a human call.
+  const countMismatch = failure.error.match(/toHaveCount[\s\S]{0,200}?Received:\s*"?(\d+)"?/)
+  if (countMismatch && Number(countMismatch[1]) > 0) return false
+
   return /waiting for locator|strict mode violation|resolved to \d+ elements|element is not attached/i.test(
     failure.error
   )
