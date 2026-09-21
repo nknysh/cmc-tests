@@ -7,9 +7,10 @@ const WINDOW_JSON_GIT_PATH = '.agents/btc-price-window/btc-price-window.json'
 
 function commitHealedWindow(): void {
   // In CI there's no configured git identity; scope one to this commit only
-  // so we never touch a developer's global/local git config.
+  // so we never touch a developer's global/local git config, while still
+  // attributing the commit to the repo owner rather than a bot account.
   const identity = process.env.CI
-    ? '-c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" '
+    ? '-c user.name="nknysh" -c user.email="nknysh@gmail.com" '
     : ''
 
   try {
