@@ -55,10 +55,13 @@ test.describe('CoinMarketCap homepage first-level navigation', { tag: '@navigati
       await home.goto()
 
       await home.tab(index).click()
+      // The tab swap updates the URL asynchronously - a synchronous page.url()
+      // check right after click() races the client-side update (this is what
+      // made the "Top" test below flaky under CI's slower CPU: two clicks
+      // back-to-back with no wait in between). Wait for the real condition.
+      await page.waitForURL(url => url.searchParams.get('tableRankBy') === tableRankBy)
 
-      const url = new URL(page.url())
-      expect(url.pathname).toBe('/')
-      expect(url.searchParams.get('tableRankBy')).toBe(tableRankBy)
+      expect(new URL(page.url()).pathname).toBe('/')
       await expect(home.heading).toBeVisible()
     })
   }
@@ -80,13 +83,12 @@ test.describe('CoinMarketCap homepage first-level navigation', { tag: '@navigati
     await home.goto()
 
     await home.tab('tab-gainers').click()
-    expect(new URL(page.url()).searchParams.get('tableRankBy')).toBe('gainers_24h')
+    await page.waitForURL(url => url.searchParams.get('tableRankBy') === 'gainers_24h')
 
     await home.tab('tab-rank').click()
+    await page.waitForURL(url => url.searchParams.get('tableRankBy') === null)
 
-    const url = new URL(page.url())
-    expect(url.pathname).toBe('/')
-    expect(url.searchParams.get('tableRankBy')).toBeNull()
+    expect(new URL(page.url()).pathname).toBe('/')
     await expect(home.heading).toBeVisible()
   })
 
