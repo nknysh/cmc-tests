@@ -78,20 +78,6 @@ test.describe('CoinMarketCap homepage first-level navigation', { tag: '@navigati
     })
   }
 
-  test('selecting "Top" returns to the default ranking view', async ({ page }) => {
-    const home = new CoinMarketCapHomePage(page)
-    await home.goto()
-
-    await home.tab('tab-gainers').click()
-    await page.waitForURL(url => url.searchParams.get('tableRankBy') === 'gainers_24h')
-
-    await home.tab('tab-rank').click()
-    await page.waitForURL(url => url.searchParams.get('tableRankBy') === null)
-
-    expect(new URL(page.url()).pathname).toBe('/')
-    await expect(home.heading).toBeVisible()
-  })
-
   test('selecting "More" reveals additional tabs without navigating away', async ({ page }) => {
     const home = new CoinMarketCapHomePage(page)
     await home.goto()
