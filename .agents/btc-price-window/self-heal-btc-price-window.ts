@@ -4,6 +4,7 @@ import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { readBtcPriceWindow, writeBtcPriceWindow } from './btcPriceWindow'
 
 const WINDOW_JSON_GIT_PATH = '.agents/btc-price-window/btc-price-window.json'
+const SYMBOL_BTC = 'BTC'
 
 function commitHealedWindow(): void {
   // In CI there's no configured git identity; scope one to this commit only
@@ -32,7 +33,7 @@ export default async function globalSetup(): Promise<void> {
   const width = window.max - window.min
 
   const client = new CoinMarketCapClient({ apiKey })
-  const { price } = await client.fetchBtcPrice()
+  const { price } = await client.fetchPrice(SYMBOL_BTC)
 
   if (price > window.min && price < window.max) {
     console.log(

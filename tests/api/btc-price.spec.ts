@@ -3,6 +3,7 @@ import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { readBtcPriceWindow } from '@agents/btc-price-window/btcPriceWindow'
 
 const apiKey = process.env.CMC_API_KEY
+const SYMBOL_BTC = 'BTC'
 const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
 
 test.describe('CoinMarketCap BTC Price', () => {
@@ -10,7 +11,7 @@ test.describe('CoinMarketCap BTC Price', () => {
     expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
 
     const client = new CoinMarketCapClient({ apiKey: apiKey! })
-    const btc = await client.fetchBtcPrice()
+    const btc = await client.fetchPrice(SYMBOL_BTC)
 
     expect(btc.price).toBeGreaterThan(BTC_PRICE_MIN)
     expect(btc.price).toBeLessThan(BTC_PRICE_MAX)

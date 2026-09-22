@@ -1,2 +1,8 @@
 export { CoinMarketCapClient } from './CoinMarketCapClient'
-export type { BtcPrice, BtcQuoteResponse, CoinMarketCapClientOptions } from './types'
+export type {
+  CoinMarketCapClientOptions,
+  Price,
+  SimplePriceEntry,
+  SimplePriceOptions,
+  SimplePriceQuote,
+} from './types'
