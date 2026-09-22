@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS test_cases (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   suite_id INTEGER REFERENCES test_suites(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
+  description TEXT,
   preconditions TEXT
 ) STRICT;
 

@@ -81,12 +81,18 @@ export class TestCaseStore {
     return roots
   }
 
-  createTestCase({ name, preconditions = null, suiteId = null, steps }: CreateTestCaseInput): TestCase {
+  createTestCase({
+    name,
+    description = null,
+    preconditions = null,
+    suiteId = null,
+    steps,
+  }: CreateTestCaseInput): TestCase {
     this.db.exec('BEGIN')
     try {
       const { lastInsertRowid } = this.db
-        .prepare('INSERT INTO test_cases (name, preconditions, suite_id) VALUES (?, ?, ?)')
-        .run(name, preconditions, suiteId)
+        .prepare('INSERT INTO test_cases (name, description, preconditions, suite_id) VALUES (?, ?, ?, ?)')
+        .run(name, description, preconditions, suiteId)
 
       const testCaseId = Number(lastInsertRowid)
       this.insertSteps(testCaseId, steps)
@@ -115,7 +121,10 @@ export class TestCaseStore {
     return rows.map((row) => this.hydrateTestCase(row))
   }
 
-  updateTestCase(id: number, { name, preconditions, suiteId, steps }: UpdateTestCaseInput): TestCase {
+  updateTestCase(
+    id: number,
+    { name, description, preconditions, suiteId, steps }: UpdateTestCaseInput,
+  ): TestCase {
     this.db.exec('BEGIN')
     try {
       const current = this.db.prepare('SELECT * FROM test_cases WHERE id = ?').get(id) as
@@ -124,9 +133,10 @@ export class TestCaseStore {
       if (!current) throw new Error(`TestCaseStore: no test case with id ${id}`)
 
       this.db
-        .prepare('UPDATE test_cases SET name = ?, preconditions = ?, suite_id = ? WHERE id = ?')
+        .prepare('UPDATE test_cases SET name = ?, description = ?, preconditions = ?, suite_id = ? WHERE id = ?')
         .run(
           name ?? current.name,
+          description === undefined ? current.description : description,
           preconditions === undefined ? current.preconditions : preconditions,
           suiteId === undefined ? current.suite_id : suiteId,
           id,
@@ -170,6 +180,7 @@ export class TestCaseStore {
     return {
       id: row.id,
       name: row.name,
+      description: row.description,
       preconditions: row.preconditions,
       suiteId: row.suite_id,
       steps: stepRows.map(toStep),

@@ -6,6 +6,7 @@ export interface TestStep {
 export interface TestCase {
   id: number
   name: string
+  description: string | null
   preconditions: string | null
   suiteId: number | null
   steps: TestStep[]
@@ -33,6 +34,7 @@ export interface CreateSuiteInput {
 
 export interface CreateTestCaseInput {
   name: string
+  description?: string | null
   preconditions?: string | null
   suiteId?: number | null
   steps: TestStep[]
@@ -40,6 +42,7 @@ export interface CreateTestCaseInput {
 
 export interface UpdateTestCaseInput {
   name?: string
+  description?: string | null
   preconditions?: string | null
   suiteId?: number | null
   steps?: TestStep[]
@@ -56,6 +59,7 @@ export interface TestCaseRow {
   id: number
   suite_id: number | null
   name: string
+  description: string | null
   preconditions: string | null
 }
 
