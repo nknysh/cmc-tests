@@ -7,3 +7,4 @@ test-results/
 .agents/coinmarketcap-navigation/last-run.json
 .agents/coinmarketcap-navigation/models/
 data/*.db
+.playwright-mcp/
