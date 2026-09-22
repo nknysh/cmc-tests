@@ -14,11 +14,12 @@ Currently the only client is `CoinMarketCapClient`, used to assert on live CoinM
 
 ```bash
 npm test              # run all specs (tests/api + tests/e2e)
-npm run test:api      # run only tests/api
+npm run test:api      # run tests/api except btc-price.spec.ts
+npm run test:btc-price # run only btc-price.spec.ts
 npm run test:ui       # Playwright UI mode
 npm run test:headed   # run headed (visible browser)
 npm run test:report   # open the last HTML report
-npx playwright test tests/api/btc-price.spec.ts   # run a single file
+npx playwright test tests/api/simple-price.spec.ts   # run a single file
 npx playwright test -g "BTC price is above threshold"  # run a single test by title
 npx tsc --noEmit      # type-check without emitting
 ```
@@ -57,14 +58,14 @@ Standard Playwright Page Object Model conventions apply; see the `e2e-testing` s
 
 ### Playwright config
 
-Two projects: `api` (`testDir: tests/api`, no browser) and `e2e` (`testDir: tests/e2e`, Desktop Chrome). `npm run test:api`/`test:e2e` filter via `--project`. `fullyParallel: true`, retries/workers adjust based on `CI` env var. Reporters: HTML (`playwright-report/`) + list. `globalSetup` runs the self-healing BTC price window (below) before every test session.
+Three projects, all no-browser except `e2e`: `api` (`testDir: tests/api`, excludes `btc-price.spec.ts` via `testIgnore`), `btc-price` (`testDir: tests/api`, matches only `btc-price.spec.ts` via `testMatch` — split out so the self-healing workflow below can run it in isolation), and `e2e` (`testDir: tests/e2e`, Desktop Chrome). `npm run test:api`/`test:btc-price`/`test:e2e` filter via `--project`. `fullyParallel: true`, retries/workers adjust based on `CI` env var. Reporters: HTML (`playwright-report/`) + list. `globalSetup` runs the self-healing BTC price window (below) before every test session, regardless of which project is selected.
 
 ### Self-healing BTC price window (`.agents/btc-price-window/`)
 
 `tests/api/btc-price.spec.ts` asserts live BTC price falls within a `[min, max]` window persisted in `.agents/btc-price-window/btc-price-window.json` (read/written via `btcPriceWindow.ts`), rather than a hardcoded range — BTC price drifts too much for a fixed threshold to stay meaningful.
 
 - `self-heal-btc-price-window.ts` is wired as Playwright's `globalSetup`. On every run it fetches the live price; if it falls outside the current window it recentres the window (same width, shifted to the new price) and commits the updated JSON. In CI, where there's no configured git identity, it scopes the repo owner's identity to that one commit rather than touching any configured identity.
-- `.github/workflows/btc-price-window-heal.yml` runs this every 4 hours via cron (plus `workflow_dispatch`), executing `tests/api/btc-price.spec.ts` (which triggers the same `globalSetup` heal) and pushing the commit if the window changed.
+- `.github/workflows/btc-price-window-heal.yml` runs this every 4 hours via cron (plus `workflow_dispatch`), executing `npx playwright test --project=btc-price` (which triggers the same `globalSetup` heal) and pushing the commit if the window changed.
 - Net effect: the window self-adjusts to track price drift instead of the test needing manual threshold updates.
 
 ### Self-healing CoinMarketCap navigation locators (`.agents/coinmarketcap-navigation/`)

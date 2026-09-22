@@ -6,6 +6,7 @@
   "scripts": {
     "test": "playwright test",
     "test:api": "playwright test --project=api",
+    "test:btc-price": "playwright test --project=btc-price",
     "test:e2e": "playwright test --project=e2e",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",

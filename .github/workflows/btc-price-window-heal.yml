@@ -20,7 +20,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npx playwright test tests/api/btc-price.spec.ts
+      - run: npx playwright test --project=btc-price
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
 

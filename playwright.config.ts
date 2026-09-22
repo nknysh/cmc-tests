@@ -20,7 +20,8 @@ export default defineConfig({
     navigationTimeout: 30000,
   },
   projects: [
-    { name: 'api', testDir: './tests/api' },
+    { name: 'api', testDir: './tests/api', testIgnore: '**/btc-price.spec.ts' },
+    { name: 'btc-price', testDir: './tests/api', testMatch: '**/btc-price.spec.ts' },
     { name: 'e2e', testDir: './tests/e2e', use: { ...devices['Desktop Chrome'] } },
   ],
 })
