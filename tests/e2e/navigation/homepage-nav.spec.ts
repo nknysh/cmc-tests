@@ -5,7 +5,8 @@ const ALL_TABS: readonly { index: NavTabIndex; label: string }[] = [
   { index: 'tab-rank', label: 'Top' },
   { index: 'tab-trending', label: 'Trending' },
   { index: 'tab-watchlist', label: 'Watchlist' },
-  { index: 'tab-real-world-assets', label: 'Stocks' },
+  { index: 'tab-stonks', label: 'Stonks' },
+  { index: 'tab-stocks', label: 'RWA' },
   { index: 'tab-derivatives', label: 'Derivatives' },
   { index: 'tab-most_visited', label: 'Most Visited' },
   { index: 'tab-new', label: 'New' },
@@ -25,7 +26,8 @@ const IN_PAGE_TABS: readonly { index: NavTabIndex; label: string; tableRankBy: s
 
 // Tabs that navigate to their own dedicated page.
 const FULL_PAGE_TABS: readonly { index: NavTabIndex; label: string; expectedPath: string }[] = [
-  { index: 'tab-real-world-assets', label: 'Stocks', expectedPath: '/real-world-assets/' },
+  { index: 'tab-stonks', label: 'Stonks', expectedPath: '/stonks/' },
+  { index: 'tab-stocks', label: 'RWA', expectedPath: '/real-world-assets/' },
   { index: 'tab-derivatives', label: 'Derivatives', expectedPath: '/derivatives/' },
   { index: 'tab-bstocks', label: 'bStocks', expectedPath: '/view/bstocks/' },
 ]
