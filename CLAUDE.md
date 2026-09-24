@@ -84,6 +84,8 @@ Three projects, all no-browser except `e2e`: `api` (`testDir: tests/api`, exclud
 
 ## Git commits
 
+Never commit or push without asking first. Wait for an explicit request each time; approval for one commit or push doesn't carry over to the next.
+
 Do not add a `Co-Authored-By: Claude` trailer to commit messages — commits should read as authored solely by the user.
 
 ## Skills
