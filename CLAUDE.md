@@ -54,7 +54,7 @@ See `src/clients/coinmarketcap/` as the reference implementation, and `.claude/s
 
 ### E2E test pattern (`tests/e2e/`)
 
-Standard Playwright Page Object Model conventions apply; see the `e2e-testing` skill (`.claude/skills/e2e-testing` → `.agents/skills/e2e-testing/SKILL.md`) for structuring page objects, config, CI/CD, artifacts, and flaky-test strategies.
+Standard Playwright Page Object Model conventions apply; see the `e2e-testing` skill (`.claude/skills/e2e-testing/SKILL.md`) for structuring page objects, config, CI/CD, artifacts, and flaky-test strategies.
 
 ### Playwright config
 
