@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git config *)",
+      "Bash(npm i *)",
+      "Bash(node -e \"const ts=require\\('typescript'\\);console.log\\(ts.version, typeof ts.createProgram\\)\")"
+    ]
+  }
+}
