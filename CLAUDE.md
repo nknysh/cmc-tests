@@ -22,9 +22,13 @@ npm run test:report   # open the last HTML report
 npx playwright test tests/api/simple-price.spec.ts   # run a single file
 npx playwright test -g "BTC price is above threshold"  # run a single test by title
 npx tsc --noEmit      # type-check without emitting
+npm run lint          # ESLint (typescript-eslint + eslint-plugin-playwright)
+npm run lint:fix      # same, with autofix
 ```
 
-There is no lint script configured.
+A Husky `pre-commit` hook (`.husky/pre-commit`, installed by the `prepare` script on `npm install`) runs `npm run lint` and blocks the commit on any error. Config is `eslint.config.mjs`; Playwright rules apply to `tests/**` only. The self-heal agents commit with `--no-verify` so an automated commit isn't blocked by lint.
+
+`typescript` is aliased to `@typescript/typescript6` because typescript-eslint doesn't support TS 7 yet (`typescript7` is kept alongside). Drop the alias once typescript-eslint supports TS >=7.1.
 
 ## Environment
 

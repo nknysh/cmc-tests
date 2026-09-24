@@ -16,7 +16,7 @@ function commitHealedWindow(): void {
 
   try {
     execSync(`git add ${WINDOW_JSON_GIT_PATH}`, { stdio: 'inherit' })
-    execSync(`git ${identity}commit -m "Self-heal BTC price window"`, { stdio: 'inherit' })
+    execSync(`git ${identity}commit --no-verify -m "Self-heal BTC price window"`, { stdio: 'inherit' })
   } catch (error) {
     console.warn('[self-heal-btc-price-window] failed to commit healed window', error)
   }
