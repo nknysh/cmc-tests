@@ -15,7 +15,8 @@
       "Bash(git commit *)",
       "Bash(python3 -c \"import yaml,sys; yaml.safe_load\\(open\\('.github/workflows/btc-price-window-heal.yml'\\)\\); print\\('YAML OK'\\)\")",
       "Bash(node -e \"console.log\\(require\\('js-yaml'\\) ? 'has js-yaml' : ''\\)\")",
-      "Bash(npm view *)"
+      "Bash(npm view *)",
+      "WebSearch"
     ],
     "additionalDirectories": [
       "/Users/mykyta/Documents/repos/cmc-tests/tests"
