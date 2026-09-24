@@ -23,6 +23,10 @@ interface TestFailure {
 }
 
 function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
+  // Remove any previous report so a run that crashes before writing one (bad
+  // config, import error) fails loudly below instead of reading a stale file.
+  fs.rmSync(JSON_REPORT_PATH, { force: true })
+
   try {
     execSync('npx playwright test --project=e2e --reporter=json', {
       cwd: REPO_ROOT,
@@ -202,10 +206,11 @@ function commitHealedLocator(): void {
 
   try {
     execSync(`git add ${PAGE_OBJECT_GIT_PATH}`, { stdio: 'inherit', cwd: REPO_ROOT })
-    execSync(`git ${identity}commit --no-verify -m "Self-heal CoinMarketCap navigation locator"`, {
-      stdio: 'inherit',
-      cwd: REPO_ROOT,
-    })
+    // Pathspec after `--` so only the page object is committed, not anything else already staged.
+    execSync(
+      `git ${identity}commit --no-verify -m "Self-heal CoinMarketCap navigation locator" -- ${PAGE_OBJECT_GIT_PATH}`,
+      { stdio: 'inherit', cwd: REPO_ROOT }
+    )
   } catch (error) {
     console.warn('[coinmarketcap-navigation] failed to commit healed locator', error)
   }
@@ -251,11 +256,16 @@ async function main(): Promise<void> {
   fs.writeFileSync(PAGE_OBJECT_PATH, patchedSource)
 
   console.log('[coinmarketcap-navigation] re-running tests to verify the patch')
-  const verification = runE2ETests()
+  let verified = false
+  try {
+    verified = runE2ETests().passed
+  } finally {
+    // Also runs if verification throws, so a patched file is never left behind unverified.
+    if (!verified) fs.writeFileSync(PAGE_OBJECT_PATH, originalSource)
+  }
 
-  if (!verification.passed) {
-    console.error('[coinmarketcap-navigation] patched locator still fails, reverting')
-    fs.writeFileSync(PAGE_OBJECT_PATH, originalSource)
+  if (!verified) {
+    console.error('[coinmarketcap-navigation] patched locator still fails, reverted')
     process.exitCode = 1
     return
   }
