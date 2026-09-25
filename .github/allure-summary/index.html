@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CMC Tests Summary</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c2330; --muted:#657084; --line:#e2e6ec; --pass:#1a7f4b; --fail:#c0392b; --other:#b7791f; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#12161d; --card:#1b212b; --text:#e7ebf1; --muted:#95a0b3; --line:#2b3441; --pass:#4cc38a; --fail:#ff7b6b; --other:#e0b050; } }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:32px 16px; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
+  main { max-width:860px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  p.sub { color:var(--muted); margin:0 0 24px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; }
+  .card h2 { font-size:17px; margin:0 0 12px; display:flex; justify-content:space-between; align-items:center; }
+  .badge { font-size:12px; font-weight:600; padding:2px 8px; border-radius:999px; border:1px solid currentColor; text-transform:uppercase; }
+  .passed { color:var(--pass); } .failed { color:var(--fail); } .other { color:var(--other); }
+  dl { display:grid; grid-template-columns:auto 1fr; gap:4px 16px; margin:0 0 16px; }
+  dt { color:var(--muted); } dd { margin:0; text-align:right; font-variant-numeric:tabular-nums; }
+  a { color:inherit; font-weight:600; }
+  .err { color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>CMC Tests Summary</h1>
+  <p class="sub">Latest Allure result of each scheduled workflow. Open a report for full history and trends.</p>
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+const reports = [
+  { title: 'BTC price window', path: 'btc-price/' },
+  { title: 'Navigation e2e', path: 'navigation/' },
+];
+const grid = document.getElementById('grid');
+
+function row(k, v) { return `<dt>${k}</dt><dd>${v}</dd>`; }
+
+async function render({ title, path }) {
+  const card = document.createElement('section');
+  card.className = 'card';
+  grid.appendChild(card);
+  try {
+    const res = await fetch(path + 'summary.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    const s = await res.json();
+    const st = s.stats || {};
+    const cls = s.status === 'passed' ? 'passed' : s.status === 'failed' ? 'failed' : 'other';
+    const rest = (k) => st[k] ?? 0;
+    card.innerHTML = `
+      <h2>${title}<span class="badge ${cls}">${s.status ?? 'unknown'}</span></h2>
+      <dl>
+        ${row('Total', rest('total'))}
+        ${row('Passed', rest('passed'))}
+        ${row('Failed', rest('failed'))}
+        ${row('Broken', rest('broken'))}
+        ${row('Skipped', rest('skipped'))}
+        ${row('Duration', ((s.duration ?? 0) / 1000).toFixed(1) + ' s')}
+        ${row('Run at', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'n/a')}
+      </dl>
+      <a href="${path}">Open full report →</a>`;
+  } catch {
+    card.innerHTML = `<h2>${title}</h2><p class="err">No report published yet.</p>`;
+  }
+}
+Promise.all(reports.map(render));
+</script>
+</body>
+</html>

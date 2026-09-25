@@ -37,7 +37,7 @@ After lint, the hook also runs `PreCommitCodeReviewHook` (`.agents/code-review-h
 
 ## Allure reporting
 
-`allure-playwright` is a reporter in `playwright.config.ts` and writes raw results to `allure-results/` for every project. `allurerc.mjs` configures Allure 3 (`allure generate`) with `appendHistory`, so each generated report adds the run to `allure-history.jsonl`. Results, report and history are gitignored locally. In CI, both heal workflows restore history from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/` or `navigation/` (enable GitHub Pages on that branch to browse it). The navigation heal script runs its inner suite with `--reporter=json,allure-playwright` so heal re-runs are recorded too.
+`allure-playwright` is a reporter in `playwright.config.ts` and writes raw results to `allure-results/` for every project. `allurerc.mjs` configures Allure 3 (`allure generate`) with `appendHistory`, so each generated report adds the run to `allure-history.jsonl`. Results, report and history are gitignored locally. In CI, both heal workflows restore history from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/` or `navigation/` and a summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links both and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script runs its inner suite with `--reporter=json,allure-playwright` so heal re-runs are recorded too.
 
 ## Environment
 

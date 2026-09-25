@@ -57,6 +57,7 @@ jobs:
           mkdir -p _pages/btc-price
           cp -r allure-report/. _pages/btc-price/
           cp allure-history.jsonl _pages/allure-history.jsonl
+          cp .github/allure-summary/index.html _pages/index.html
           cd _pages
           git add -A
           git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "Allure report (btc-price)" || exit 0
