@@ -11,3 +11,6 @@ allure-history.jsonl
 .agents/coinmarketcap-navigation/models/
 data/*.db
 .playwright-mcp/
+
+# Claude Code local settings
+.claude/settings.local.json
