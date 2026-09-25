@@ -16,6 +16,7 @@
     "test:allure": "playwright test; npm run allure:generate",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "viewer": "tsx src/web/testCaseViewer/server.ts",
     "code-review": "node .agents/code-review-hook/PreCommitCodeReviewHook.mts",
     "prepare": "husky"
   },
@@ -35,6 +36,7 @@
     "eslint": "^10.11.0",
     "eslint-plugin-playwright": "^2.12.0",
     "husky": "^9.1.7",
+    "tsx": "^4.23.15",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.70.1",
     "typescript7": "npm:typescript@^7.0.2"

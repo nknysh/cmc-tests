@@ -22,6 +22,7 @@ npx playwright test -g "BTC price is above threshold"  # run a single test by ti
 npx tsc --noEmit      # type-check without emitting
 npm run lint          # ESLint (typescript-eslint + eslint-plugin-playwright)
 npm run lint:fix      # same, with autofix
+npm run viewer        # read-only web UI for the test cases DB at http://127.0.0.1:4000 (PORT, TEST_CASES_DB override)
 ```
 
 A Husky `pre-commit` hook (`.husky/pre-commit`, installed by the `prepare` script on `npm install`) runs `npm run lint` and blocks the commit on any error. Config is `eslint.config.mjs`; Playwright rules apply to `tests/**` only. The self-heal agents commit with `--no-verify` so an automated commit isn't blocked by lint.

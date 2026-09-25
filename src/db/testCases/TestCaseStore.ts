@@ -121,6 +121,14 @@ export class TestCaseStore {
     return rows.map((row) => this.hydrateTestCase(row))
   }
 
+  listUnassignedTestCases(): TestCase[] {
+    const rows = this.db
+      .prepare('SELECT * FROM test_cases WHERE suite_id IS NULL ORDER BY name')
+      .all() as unknown as TestCaseRow[]
+
+    return rows.map((row) => this.hydrateTestCase(row))
+  }
+
   updateTestCase(
     id: number,
     { name, description, preconditions, suiteId, steps }: UpdateTestCaseInput,

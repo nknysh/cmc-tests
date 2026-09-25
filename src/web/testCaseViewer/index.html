@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test Case Viewer</title>
+<style>
+  :root { --bg:#fff; --fg:#1d2129; --muted:#667085; --line:#e4e7ec; --panel:#f8f9fb; --accent:#2563eb; --sel:#e0ebff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --fg:#e6e8eb; --muted:#98a2b3; --line:#2a2f37; --panel:#1a1e24; --accent:#6b9cff; --sel:#25324d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); display:flex; height:100vh; }
+  aside { width:340px; min-width:240px; border-right:1px solid var(--line); background:var(--panel); overflow:auto; padding:12px; }
+  main { flex:1; overflow:auto; padding:24px 32px; }
+  .toolbar { display:flex; gap:8px; margin-bottom:12px; }
+  button { font:inherit; padding:3px 10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); border-radius:6px; cursor:pointer; }
+  details > details, details > .cases { margin-left:16px; }
+  summary { cursor:pointer; padding:2px 4px; border-radius:4px; }
+  summary:hover, .case:hover { background:var(--sel); }
+  .case { display:block; padding:2px 4px 2px 18px; border-radius:4px; cursor:pointer; color:inherit; text-decoration:none; }
+  .selected { background:var(--sel); font-weight:600; }
+  .count { color:var(--muted); font-size:12px; }
+  .muted { color:var(--muted); }
+  h1 { font-size:20px; margin:0 0 4px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:24px 0 6px; }
+  p.text { white-space:pre-wrap; margin:0; }
+  table { border-collapse:collapse; width:100%; }
+  th, td { text-align:left; vertical-align:top; padding:8px 10px; border:1px solid var(--line); white-space:pre-wrap; }
+  th { background:var(--panel); }
+  td.n { width:40px; color:var(--muted); }
+  .card { border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin-bottom:8px; cursor:pointer; }
+  .card:hover { border-color:var(--accent); }
+  @media (max-width:700px) { body { flex-direction:column; height:auto; } aside { width:auto; max-height:45vh; } }
+</style>
+</head>
+<body>
+<aside>
+  <div class="toolbar">
+    <button id="expand">Expand all</button>
+    <button id="collapse">Collapse all</button>
+  </div>
+  <div id="tree"></div>
+</aside>
+<main id="detail"><p class="muted">Select a suite or test case.</p></main>
+
+<script>
+const treeEl = document.getElementById('tree')
+const detailEl = document.getElementById('detail')
+
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props)
+  node.append(...children)
+  return node
+}
+
+async function api(path) {
+  const res = await fetch(path)
+  if (!res.ok) throw new Error(`${path}: ${res.status}`)
+  return res.json()
+}
+
+function setHash(hash) {
+  if (location.hash !== hash) location.hash = hash
+}
+
+function markSelected(hash) {
+  document.querySelectorAll('.selected').forEach((n) => n.classList.remove('selected'))
+  document.querySelector(`[data-hash="${hash}"]`)?.classList.add('selected')
+}
+
+function caseLink(tc) {
+  const link = el('a', { className: 'case', textContent: `#${tc.id} ${tc.name}`, href: `#case/${tc.id}` })
+  link.dataset.hash = `#case/${tc.id}`
+  return link
+}
+
+async function fillCases(container, loader) {
+  if (container.dataset.loaded) return
+  container.dataset.loaded = '1'
+  const cases = await loader()
+  container.replaceChildren(...cases.map(caseLink))
+  return cases
+}
+
+function buildSuite(node) {
+  const cases = el('div', { className: 'cases' })
+  const count = el('span', { className: 'count' })
+  const summary = el('summary', {}, `#${node.id} ${node.name}`, ' ', count)
+  summary.dataset.hash = `#suite/${node.id}`
+  const details = el('details', {}, summary, ...node.children.map(buildSuite), cases)
+  details.dataset.suiteId = node.id
+  const load = () => api(`/api/suites/${node.id}/test-cases`)
+  const populate = async () => {
+    const list = await fillCases(cases, load)
+    if (list) count.textContent = `(${list.length})`
+  }
+  details.addEventListener('toggle', () => { if (details.open) populate() })
+  details.populate = populate
+  summary.addEventListener('click', () => setHash(`#suite/${node.id}`))
+  return details
+}
+
+function buildUnsorted() {
+  const cases = el('div', { className: 'cases' })
+  const summary = el('summary', {}, 'Unsorted')
+  summary.dataset.hash = '#unsorted'
+  const details = el('details', {}, summary, cases)
+  details.addEventListener('toggle', () => {
+    if (details.open) fillCases(cases, () => api('/api/test-cases/unsorted'))
+  })
+  summary.addEventListener('click', () => setHash('#unsorted'))
+  return details
+}
+
+function section(title, text) {
+  return [el('h2', { textContent: title }), el('p', { className: 'text', textContent: text || '—' })]
+}
+
+function renderCase(tc) {
+  const rows = tc.steps.map((s, i) =>
+    el('tr', {}, el('td', { className: 'n', textContent: i + 1 }), el('td', { textContent: s.action }), el('td', { textContent: s.expectedOutput })))
+  const table = el('table', {},
+    el('thead', {}, el('tr', {}, el('th', { textContent: '#' }), el('th', { textContent: 'Action' }), el('th', { textContent: 'Expected output' }))),
+    el('tbody', {}, ...rows))
+  detailEl.replaceChildren(
+    el('h1', { textContent: `#${tc.id} ${tc.name}` }),
+    ...section('Description', tc.description),
+    ...section('Preconditions', tc.preconditions),
+    el('h2', { textContent: `Steps (${tc.steps.length})` }),
+    tc.steps.length ? table : el('p', { className: 'muted', textContent: 'No steps.' }),
+  )
+}
+
+function renderList(title, cases) {
+  detailEl.replaceChildren(
+    el('h1', { textContent: title }),
+    el('span', { className: 'muted', textContent: `${cases.length} test case${cases.length === 1 ? '' : 's'}` }),
+    el('h2', { textContent: 'Tests' }),
+    ...(cases.length ? cases.map((tc) => {
+      const card = el('div', { className: 'card' },
+        el('strong', { textContent: `#${tc.id} ${tc.name}` }),
+        el('div', { className: 'muted', textContent: `${tc.steps.length} step${tc.steps.length === 1 ? '' : 's'}${tc.description ? ' · ' + tc.description : ''}` }))
+      card.addEventListener('click', () => setHash(`#case/${tc.id}`))
+      return card
+    }) : [el('p', { className: 'muted', textContent: 'No test cases.' })]),
+  )
+}
+
+function openAncestors(node) {
+  for (let p = node.parentElement; p; p = p.parentElement) {
+    if (p.tagName === 'DETAILS') p.open = true
+  }
+}
+
+async function route() {
+  const hash = location.hash
+  try {
+    let m
+    if ((m = /^#case\/(\d+)$/.exec(hash))) {
+      const tc = await api(`/api/test-cases/${m[1]}`)
+      renderCase(tc)
+      if (tc.suiteId !== null) {
+        const suite = treeEl.querySelector(`details[data-suite-id="${tc.suiteId}"]`)
+        if (suite) { openAncestors(suite); suite.open = true; await suite.populate() }
+      }
+    } else if ((m = /^#suite\/(\d+)$/.exec(hash))) {
+      const suite = treeEl.querySelector(`details[data-suite-id="${m[1]}"]`)
+      const name = suite?.querySelector('summary').firstChild.textContent ?? `#${m[1]} Suite`
+      renderList(name, await api(`/api/suites/${m[1]}/test-cases`))
+    } else if (hash === '#unsorted') {
+      renderList('Unsorted', await api('/api/test-cases/unsorted'))
+    } else {
+      detailEl.replaceChildren(el('p', { className: 'muted', textContent: 'Select a suite or test case.' }))
+    }
+  } catch (err) {
+    detailEl.replaceChildren(el('p', { textContent: String(err) }))
+  }
+  markSelected(hash)
+}
+
+function setAll(open) {
+  treeEl.querySelectorAll('details').forEach((d) => { d.open = open })
+}
+
+document.getElementById('expand').addEventListener('click', () => setAll(true))
+document.getElementById('collapse').addEventListener('click', () => setAll(false))
+window.addEventListener('hashchange', route)
+
+;(async () => {
+  const suites = await api('/api/suites')
+  treeEl.replaceChildren(...suites.map(buildSuite), buildUnsorted())
+  route()
+})()
+</script>
+</body>
+</html>
