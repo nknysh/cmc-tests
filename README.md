@@ -72,10 +72,30 @@ npm run lint            # ESLint
 npx tsc --noEmit        # type-check
 ```
 
+## Test case viewer
+
+A read-only web UI for browsing the test cases database (`data/test-cases.db`): a collapsible suite tree, the tests in each suite, and a detail view for each test case (description, preconditions, steps). Suites and test cases are shown with their IDs (`#<id> <name>`), and test cases without a suite appear under "Unsorted".
+
+```bash
+npm install     # first time only
+npm run viewer  # then open http://127.0.0.1:4000
+```
+
+Stop it with `Ctrl+C`. The server only listens on `127.0.0.1`. Restart it after editing `index.html`, since the page is read once at startup.
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `PORT` | `4000` | Port to listen on |
+| `TEST_CASES_DB` | `data/test-cases.db` | Path to the SQLite database file |
+
+Test case URLs are shareable, e.g. `http://127.0.0.1:4000/#case/2` (also `#suite/<id>` and `#unsorted`).
+
 ## Project layout
 
 ```
 src/clients/           typed API clients (CoinMarketCap)
+src/db/testCases/      SQLite test case store
+src/web/testCaseViewer/ test case viewer (server + page)
 tests/api/             API specs
 tests/e2e/             E2E specs and page objects
 .agents/               self-healing agents and the pre-commit review hook
