@@ -1,8 +1,8 @@
-name: CoinMarketCap Navigation Self-Heal
+name: API Tests
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '30 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  heal:
+  api:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -25,31 +25,9 @@ jobs:
 
       - run: npm ci
 
-      - run: npx playwright install --with-deps chromium
-
-      - name: Cache local GGUF model
-        uses: actions/cache@v4
-        with:
-          path: .agents/coinmarketcap-navigation/models
-          key: qwen2.5-coder-7b-instruct-q4_k_m-gguf
-
-      - run: node .agents/coinmarketcap-navigation/self-heal-navigation-locators.mts
+      - run: npx playwright test --project=api
         env:
-          BASE_URL: https://coinmarketcap.com
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
-
-      # Kept regardless of outcome - a live-site test failure is only
-      # debuggable after the fact if the screenshots/traces survive the run.
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          if-no-files-found: ignore
-          retention-days: 7
 
       # Allure history lives on gh-pages so each run's results accumulate.
       - name: Restore Allure history
@@ -80,15 +58,12 @@ jobs:
         run: |
           git fetch origin gh-pages:gh-pages 2>/dev/null || git worktree add --orphan -b gh-pages _pages
           [ -d _pages ] || git worktree add _pages gh-pages
-          rm -rf _pages/navigation
-          mkdir -p _pages/navigation
-          cp -r allure-report/. _pages/navigation/
+          rm -rf _pages/api
+          mkdir -p _pages/api
+          cp -r allure-report/. _pages/api/
           cp allure-history.jsonl _pages/allure-history.jsonl
           cp .github/allure-summary/index.html _pages/index.html
           cd _pages
           git add -A
-          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "Allure report (navigation)" || exit 0
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "Allure report (api)" || exit 0
           git push origin gh-pages
-
-      - name: Push healed locator if changed
-        run: git push

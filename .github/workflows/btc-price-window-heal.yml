@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# One gh-pages publisher at a time; the workflows share allure-history.jsonl.
+concurrency:
+  group: gh-pages-publish
+  cancel-in-progress: false
+
 jobs:
   heal:
     runs-on: ubuntu-latest
