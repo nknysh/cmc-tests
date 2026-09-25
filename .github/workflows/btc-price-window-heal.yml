@@ -24,5 +24,43 @@ jobs:
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
 
+      # Allure history lives on gh-pages so each run's results accumulate.
+      - name: Restore Allure history
+        if: always()
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Generate Allure report
+        if: always()
+        run: |
+          cp gh-pages/allure-history.jsonl allure-history.jsonl 2>/dev/null || true
+          npx allure generate allure-results
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Publish Allure report to gh-pages
+        if: always()
+        run: |
+          git fetch origin gh-pages:gh-pages 2>/dev/null || git worktree add --orphan -b gh-pages _pages
+          [ -d _pages ] || git worktree add _pages gh-pages
+          rm -rf _pages/btc-price
+          mkdir -p _pages/btc-price
+          cp -r allure-report/. _pages/btc-price/
+          cp allure-history.jsonl _pages/allure-history.jsonl
+          cd _pages
+          git add -A
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "Allure report (btc-price)" || exit 0
+          git push origin gh-pages
+
       - name: Push healed window if changed
         run: git push

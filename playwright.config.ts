@@ -10,6 +10,11 @@ export default defineConfig({
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
     ['list'],
+    ['allure-playwright', {
+      resultsDir: 'allure-results',
+      detail: true,
+      environmentInfo: { BASE_URL: process.env.BASE_URL || 'http://localhost:3000', CI: String(!!process.env.CI) },
+    }],
   ],
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',

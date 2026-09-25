@@ -28,7 +28,7 @@ function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
   fs.rmSync(JSON_REPORT_PATH, { force: true })
 
   try {
-    execSync('npx playwright test --project=e2e --reporter=json', {
+    execSync('npx playwright test --project=e2e --reporter=json,allure-playwright', {
       cwd: REPO_ROOT,
       stdio: ['ignore', 'ignore', 'inherit'],
       env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: JSON_REPORT_PATH },

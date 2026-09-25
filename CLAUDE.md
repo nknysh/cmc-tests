@@ -19,6 +19,9 @@ npm run test:btc-price # run only btc-price.spec.ts
 npm run test:ui       # Playwright UI mode
 npm run test:headed   # run headed (visible browser)
 npm run test:report   # open the last HTML report
+npm run allure:generate # build allure-report/ from allure-results/ (appends to allure-history.jsonl)
+npm run allure:open   # open the generated Allure report
+npm run test:allure   # run all specs, then generate the Allure report even if tests failed
 npx playwright test tests/api/simple-price.spec.ts   # run a single file
 npx playwright test -g "BTC price is above threshold"  # run a single test by title
 npx tsc --noEmit      # type-check without emitting
@@ -31,6 +34,10 @@ A Husky `pre-commit` hook (`.husky/pre-commit`, installed by the `prepare` scrip
 After lint, the hook also runs `PreCommitCodeReviewHook` (`.agents/code-review-hook/PreCommitCodeReviewHook.mts`, also `npm run code-review`). It diffs all uncommitted `.ts`/`.mts` changes (staged, unstaged, untracked) and reviews them with the `typescript-code-review` skill via a headless, read-only `claude -p` session, blocking the commit on 🔴 critical findings only. It needs the `claude` CLI on `PATH` (or `CLAUDE_BIN`) and fails open with a warning if the CLI is missing, times out, or returns unparseable output. Bypass with `SKIP_CODE_REVIEW=1` or `--no-verify`. Each run adds roughly 30s+ and a model call to every commit.
 
 `typescript` is aliased to `@typescript/typescript6` because typescript-eslint doesn't support TS 7 yet (`typescript7` is kept alongside). Drop the alias once typescript-eslint supports TS >=7.1.
+
+## Allure reporting
+
+`allure-playwright` is a reporter in `playwright.config.ts` and writes raw results to `allure-results/` for every project. `allurerc.mjs` configures Allure 3 (`allure generate`) with `appendHistory`, so each generated report adds the run to `allure-history.jsonl`. Results, report and history are gitignored locally. In CI, both heal workflows restore history from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/` or `navigation/` (enable GitHub Pages on that branch to browse it). The navigation heal script runs its inner suite with `--reporter=json,allure-playwright` so heal re-runs are recorded too.
 
 ## Environment
 

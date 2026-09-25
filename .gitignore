@@ -1,6 +1,9 @@
 node_modules/
 playwright-report/
 test-results/
+allure-results/
+allure-report/
+allure-history.jsonl
 .DS_Store
 *.log
 .env
