@@ -40,6 +40,7 @@
     "typescript7": "npm:typescript@^7.0.2"
   },
   "dependencies": {
+    "@anthropic-ai/claude-code": "^2.1.282",
     "dotenv": "^17.4.2",
     "node-llama-cpp": "^3.21.1"
   },
