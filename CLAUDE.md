@@ -13,14 +13,9 @@ Currently the only client is `CoinMarketCapClient`, used to assert on live CoinM
 ## Commands
 
 ```bash
-npm test              # run all specs (tests/api + tests/e2e)
 npm run test:api      # run tests/api except btc-price.spec.ts
 npm run test:btc-price # run only btc-price.spec.ts
-npm run test:ui       # Playwright UI mode
-npm run test:headed   # run headed (visible browser)
-npm run test:report   # open the last HTML report
 npm run allure:generate # build allure-report/ from allure-results/ (appends to allure-history.jsonl)
-npm run allure:open   # open the generated Allure report
 npm run test:allure   # run all specs, then generate the Allure report even if tests failed
 npx playwright test tests/api/simple-price.spec.ts   # run a single file
 npx playwright test -g "BTC price is above threshold"  # run a single test by title
@@ -37,7 +32,7 @@ After lint, the hook also runs `PreCommitCodeReviewHook` (`.agents/code-review-h
 
 ## Allure reporting
 
-`allure-playwright` is a reporter in `playwright.config.ts` and writes raw results to `allure-results/` for every project. `allurerc.mjs` configures Allure 3 (`allure generate`) with `appendHistory`, so each generated report adds the run to `allure-history.jsonl`. Results, report and history are gitignored locally. In CI, the two heal workflows and `api-tests.yml` restore history from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/`, `navigation/` or `api/` (the `api-tests.yml` workflow runs `--project=api`, i.e. the simple-price spec, every 6 hours plus `workflow_dispatch`) and a summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links all three and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script runs its inner suite with `--reporter=json,allure-playwright` so heal re-runs are recorded too.
+`allurerc.mjs` configures Allure 3 (`allure generate`) with `appendHistory`, so each generated report adds the run to `allure-history.jsonl`. Results, report and history are gitignored locally. In CI, the two heal workflows and `api-tests.yml` restore history from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/`, `navigation/` or `api/` (the `api-tests.yml` workflow runs `--project=api`, i.e. the simple-price spec, every 6 hours plus `workflow_dispatch`) and a summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links all three and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script runs its inner suite with `--reporter=json,allure-playwright` so heal re-runs are recorded too.
 
 ## Environment
 
@@ -71,7 +66,7 @@ Standard Playwright Page Object Model conventions apply; see the `e2e-testing` s
 
 ### Playwright config
 
-Three projects, all no-browser except `e2e`: `api` (`testDir: tests/api`, excludes `btc-price.spec.ts` via `testIgnore`), `btc-price` (`testDir: tests/api`, matches only `btc-price.spec.ts` via `testMatch` — split out so the self-healing workflow below can run it in isolation), and `e2e` (`testDir: tests/e2e`, Desktop Chrome). `npm run test:api`/`test:btc-price`/`test:e2e` filter via `--project`. `fullyParallel: true`, retries/workers adjust based on `CI` env var. Reporters: HTML (`playwright-report/`) + list. `globalSetup` runs the self-healing BTC price window (below) before every test session, regardless of which project is selected.
+`globalSetup` runs the self-healing BTC price window (below) before every test session, regardless of which `--project` is selected. The `btc-price` project is split out from `api` so the heal workflow can run it in isolation.
 
 ### Self-healing BTC price window (`.agents/btc-price-window/`)
 
@@ -81,15 +76,7 @@ Three projects, all no-browser except `e2e`: `api` (`testDir: tests/api`, exclud
 - `.github/workflows/btc-price-window-heal.yml` runs this every 4 hours via cron (plus `workflow_dispatch`), executing `npx playwright test --project=btc-price` (which triggers the same `globalSetup` heal) and pushing the commit if the window changed.
 - Net effect: the window self-adjusts to track price drift instead of the test needing manual threshold updates.
 
-### Self-healing CoinMarketCap navigation locators (`.agents/coinmarketcap-navigation/`)
-
-`self-heal-navigation-locators.mts` is a standalone script (not wired into Playwright — it runs the suite itself as a subprocess) that keeps `tests/e2e/pages/CoinMarketCapHomePage.ts` working when the live site's markup changes:
-
-- Runs `--project=e2e` and inspects the JSON report. If everything passed, it exits immediately.
-- If a failure's error text looks locator-related (`waiting for locator`, `strict mode violation`, etc.) rather than a genuine assertion/business-logic failure, it opens the live site and serializes the nav area's actual tag/attributes/text (not a plain ARIA snapshot — that drops the `data-test`/`data-index` attributes the selectors key off, which made an early version of this agent silently fail to repair anything), then sends the current page object source + the error + that snapshot to a **locally-run** LLM (Qwen2.5-Coder-7B-Instruct, GGUF, via `node-llama-cpp`), asking for the complete corrected file back. No API key, no network call to an LLM provider — inference runs in-process on the machine executing the script. The model is downloaded once (~4.7GB) to `.agents/coinmarketcap-navigation/models/` (gitignored) on first use.
-- Writes the proposed file, re-runs the suite to verify the fix actually resolves the failure, and only then commits (reverting otherwise). Uses the same repo-owner CI git identity as the BTC price window agent.
-- A non-locator failure (a real behavioral regression) is deliberately left alone — it's not something an LLM patch should paper over — and the script exits non-zero so a human notices.
-- `.github/workflows/coinmarketcap-navigation-heal.yml` runs this daily via cron (plus `workflow_dispatch`), caching the downloaded model across runs. CPU-only inference on a standard GitHub-hosted runner is slow (minutes per completion, not seconds) — this is the tradeoff for not depending on a paid API.
+A separate daily script heals `tests/e2e/pages/CoinMarketCapHomePage.ts` locators with a local LLM; details load from `.agents/coinmarketcap-navigation/CLAUDE.md` when working there.
 
 ## Git commits
 

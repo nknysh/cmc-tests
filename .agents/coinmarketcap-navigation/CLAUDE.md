@@ -1,0 +1,9 @@
+# Self-healing CoinMarketCap navigation locators
+
+`self-heal-navigation-locators.mts` is a standalone script (not wired into Playwright — it runs the suite itself as a subprocess) that keeps `tests/e2e/pages/CoinMarketCapHomePage.ts` working when the live site's markup changes:
+
+- Runs `--project=e2e` and inspects the JSON report. If everything passed, it exits immediately.
+- If a failure's error text looks locator-related (`waiting for locator`, `strict mode violation`, etc.) rather than a genuine assertion/business-logic failure, it opens the live site and serializes the nav area's actual tag/attributes/text (not a plain ARIA snapshot — that drops the `data-test`/`data-index` attributes the selectors key off, which made an early version of this agent silently fail to repair anything), then sends the current page object source + the error + that snapshot to a **locally-run** LLM (Qwen2.5-Coder-7B-Instruct, GGUF, via `node-llama-cpp`), asking for the complete corrected file back. No API key, no network call to an LLM provider — inference runs in-process on the machine executing the script. The model is downloaded once (~4.7GB) to `.agents/coinmarketcap-navigation/models/` (gitignored) on first use.
+- Writes the proposed file, re-runs the suite to verify the fix actually resolves the failure, and only then commits (reverting otherwise). Uses the same repo-owner CI git identity as the BTC price window agent.
+- A non-locator failure (a real behavioral regression) is deliberately left alone — it's not something an LLM patch should paper over — and the script exits non-zero so a human notices.
+- `.github/workflows/coinmarketcap-navigation-heal.yml` runs this daily via cron (plus `workflow_dispatch`), caching the downloaded model across runs. CPU-only inference on a standard GitHub-hosted runner is slow (minutes per completion, not seconds) — this is the tradeoff for not depending on a paid API.
