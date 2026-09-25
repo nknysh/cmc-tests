@@ -73,6 +73,28 @@ When reviewing TypeScript code, follow this structured approach:
 - **Documentation**: Verify JSDoc comments for public APIs
 - **Deprecation notices**: Ensure deprecated code is properly marked
 
+#### Test Integrity (testing-specific)
+No change may weaken an existing test. When the diff touches test files (`tests/**`, `*.spec.ts`, `*.test.ts`), fixtures, page objects, or Playwright/test-runner config, check the change against the original and flag anything that reduces what the suite can catch. A test should only be changed to fix a real defect in the test itself or to follow an intentional, explained behavior change, and its strictness must not drop as a side effect.
+
+Flag as weakening:
+- **Removed or skipped tests**: deleted `test()` blocks, `test.skip`, `test.fixme`, `test.fail`, `.only` (which silently drops the rest of the suite), commented-out tests, or tests removed from a project's `testMatch`/`testDir`/`grep`
+- **Removed or loosened assertions**: deleted `expect` calls, exact values replaced with looser ones (`toBe(x)` → `toBeTruthy()` / `toBeDefined()` / `toBeGreaterThan(0)`), `toEqual` → `toMatchObject`/`expect.objectContaining` without reason, narrower checks on fields, lengths, or error messages
+- **Widened thresholds and ranges**: raised max / lowered min bounds, larger tolerances, larger timeouts used to mask slowness rather than fix a race, more retries, or `expect.soft` replacing hard assertions
+- **Swallowed failures**: `try/catch` around assertions, `.catch(() => {})`, conditional assertions (`if (x) expect(...)`), early `return` before assertions, assertions moved after a path that can skip them
+- **Weaker selectors or waits**: locators made less specific so they match more elements, `{ force: true }`, `first()` / `.nth()` added to dodge strict-mode violations, or fixed `waitForTimeout` replacing a real condition
+- **Mocks replacing real behavior**: stubbing or mocking the thing the test is meant to exercise, so it can no longer fail for the reason it exists
+- **Lowered guardrails**: disabled lint rules on test files (e.g. `playwright/*` rule turned off), `forbidOnly` removed, loosened `expect` defaults in config, `--no-verify`-style bypasses added to test scripts
+- **Coverage shrinkage**: parameterized cases removed, a data set reduced, or a project/browser dropped from the run
+
+Also verify:
+- Every behavior the code change alters is still covered by at least one test that would fail if that behavior regressed; a passing suite after the change is not proof, so ask what now goes untested
+- New or changed production code that touches tested behavior comes with matching test updates that are equal or stricter, never with tests edited only to make them pass
+- A failing test is treated as a signal about the code under test first; changing the test to match new output must be justified in the diff or commit message
+
+Exception: values that are designed to move, such as the self-healing BTC price window in `.agents/btc-price-window/`, may change by their own mechanism. Flag a change to how that mechanism works (for example, widening the window width) exactly as any other loosened threshold.
+
+Severity: a weakened, skipped, or removed test without a stated and justified reason is 🔴 critical. Weakening that is plausibly intentional but not explained is 🟡 important; ask for the reason. State the specific assertion or test affected and what regression it would no longer catch.
+
 ### 3. Output Structure
 
 Organize the review with clear sections:
@@ -121,7 +143,7 @@ Organize the review with clear sections:
 - Use severity indicators (🔴 critical, 🟡 important, 🔵 suggestion)
 
 **Prioritization**:
-1. Critical: Security issues, type errors, runtime bugs
+1. Critical: Security issues, type errors, runtime bugs, unjustified weakening of existing tests (see Test Integrity)
 2. Important: Performance problems, maintainability issues, anti-patterns
 3. Suggestions: Style improvements, modern syntax, optimizations
 
