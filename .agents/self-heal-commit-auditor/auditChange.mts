@@ -22,17 +22,25 @@ export async function auditChange(params: {
   })
 
   const match = response.trim().match(VERDICT_LINE)
-  if (!match) {
-    // An automated commit nobody reviewed is worse than a false-positive
-    // block a human can clear - fail closed on an unparseable response.
-    return {
-      critical: true,
-      reasoning: `unparseable auditor response, blocking out of caution. Raw response: ${response.slice(0, 500)}`,
-    }
-  }
+  const result = !match
+    ? {
+        // An automated commit nobody reviewed is worse than a false-positive
+        // block a human can clear - fail closed on an unparseable response.
+        critical: true,
+        reasoning: `unparseable auditor response, blocking out of caution. Raw response: ${response.slice(0, 500)}`,
+      }
+    : {
+        critical: match[1].toUpperCase() === 'CRITICAL',
+        reasoning: response.trim().slice(match[0].length).trim(),
+      }
 
-  const reasoning = response.trim().slice(match[0].length).trim()
-  return { critical: match[1].toUpperCase() === 'CRITICAL', reasoning }
+  // Logged unconditionally, not just on a block - a PASS verdict's reasoning
+  // is what tells a human later whether the auditor actually scrutinised a
+  // change or waved it through for a weak reason, which a block-only log
+  // can't show.
+  console.log(`[self-heal-commit-auditor] verdict: ${result.critical ? 'CRITICAL' : 'PASS'}\n${result.reasoning}`)
+
+  return result
 }
 
 // Called by a caller's CRITICAL branch. A plain console.error can scroll off
