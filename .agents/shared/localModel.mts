@@ -1,5 +1,15 @@
 import path from 'node:path'
-import { getLlama, resolveModelFile, LlamaChatSession } from 'node-llama-cpp'
+// Dynamic import, not a static one: node-llama-cpp's entry point does a
+// top-level await, and this module is loaded from self-heal-btc-price-window.ts
+// via Playwright's globalSetup, which (per this repo's commonjs tsconfig) loads
+// TS files through require() - Node refuses to require() an ESM graph that
+// contains a top-level await ("require() cannot be used on an ESM graph with
+// top-level await"). A dynamic import() always goes through Node's ESM loader
+// regardless of the caller's own module system, so it works from both that
+// require()-based path and the navigation heal's direct `node script.mts` (ESM).
+async function loadNodeLlamaCpp() {
+  return import('node-llama-cpp')
+}
 
 // Runs fully offline via node-llama-cpp; downloaded once (~4.7GB) on first use.
 // Deliberately kept pointed at the navigation heal's existing models dir (already
@@ -32,6 +42,7 @@ export async function promptLocalModel(params: {
   userPrompt: string
   contextSize?: number
 }): Promise<string> {
+  const { getLlama, resolveModelFile, LlamaChatSession } = await loadNodeLlamaCpp()
   const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
 
   const llama = await getLlama()
