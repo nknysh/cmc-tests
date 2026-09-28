@@ -73,11 +73,11 @@ Standard Playwright Page Object Model conventions apply; see the `e2e-testing` s
 
 `tests/api/btc-price.spec.ts` asserts live BTC price falls within a `[min, max]` window persisted in `.agents/btc-price-window/btc-price-window.json` (read/written via `btcPriceWindow.ts`), rather than a hardcoded range — BTC price drifts too much for a fixed threshold to stay meaningful.
 
-- `self-heal-btc-price-window.ts` is wired as Playwright's `globalSetup`. On every run it fetches the live price; if it falls outside the current window it recentres the window (same width, shifted to the new price) and commits the updated JSON. In CI, where there's no configured git identity, it scopes the repo owner's identity to that one commit rather than touching any configured identity.
+- `self-heal-btc-price-window.ts` is wired as Playwright's `globalSetup`. On every run it fetches the live price; if it falls outside the current window it computes a recentred window (same width, shifted to the new price), then passes the old window, the fetched price, and the proposed new window to the shared local-model auditor (`.agents/self-heal-commit-auditor/`) before writing anything. Only on a `PASS` verdict does it write the updated JSON and commit; on `CRITICAL` it leaves the existing window untouched and logs why, so a genuinely out-of-bounds price surfaces as an ordinary test failure instead of a bad recentring being silently accepted. In CI, where there's no configured git identity, it scopes the repo owner's identity to that one commit rather than touching any configured identity.
 - `.github/workflows/btc-price-window-heal.yml` runs this every 4 hours via cron (plus `workflow_dispatch`), executing `npx playwright test --project=btc-price` (which triggers the same `globalSetup` heal) and pushing the commit if the window changed.
 - Net effect: the window self-adjusts to track price drift instead of the test needing manual threshold updates.
 
-A separate daily script heals `tests/e2e/pages/CoinMarketCapHomePage.ts` locators with a local LLM; details load from `.agents/coinmarketcap-navigation/CLAUDE.md` when working there.
+A separate daily script heals `tests/e2e/pages/CoinMarketCapHomePage.ts` locators with a local LLM, then runs the same shared auditor on its own proposed patch before committing; details load from `.agents/coinmarketcap-navigation/CLAUDE.md` when working there. Both self-heal scripts route their pre-commit audit through `.agents/self-heal-commit-auditor/` (see its `CLAUDE.md`) — a local-model gate that can veto the commit outright, since both scripts commit with `--no-verify` and would otherwise bypass the pre-commit review hook entirely.
 
 ## Git commits
 

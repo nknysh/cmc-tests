@@ -4,7 +4,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { chromium } from '@playwright/test'
 import type { JSONReport, JSONReportSuite } from '@playwright/test/reporter'
-import { getLlama, resolveModelFile, LlamaChatSession } from 'node-llama-cpp'
+import { promptLocalModel } from '../shared/localModel.mts'
+import { auditChange, reportAuditBlock } from '../self-heal-commit-auditor/auditChange.mts'
 
 // Assumes invocation from the repo root (true for both the CI workflow and
 // local `node .agents/coinmarketcap-navigation/self-heal-navigation-locators.mts`).
@@ -12,10 +13,6 @@ const REPO_ROOT = process.cwd()
 const PAGE_OBJECT_GIT_PATH = 'tests/e2e/pages/CoinMarketCapHomePage.ts'
 const PAGE_OBJECT_PATH = path.join(REPO_ROOT, PAGE_OBJECT_GIT_PATH)
 const JSON_REPORT_PATH = path.join(REPO_ROOT, '.agents/coinmarketcap-navigation/last-run.json')
-
-// Runs fully offline via node-llama-cpp; downloaded once (~4.7GB) to MODELS_DIR on first use.
-const MODEL_URI = 'hf:Qwen/Qwen2.5-Coder-7B-Instruct-GGUF:Q4_K_M'
-const MODELS_DIR = path.join(REPO_ROOT, '.agents/coinmarketcap-navigation/models')
 
 interface TestFailure {
   title: string
@@ -147,53 +144,37 @@ async function proposeFix(params: {
   errorSummary: string
   liveSnapshot: string
 }): Promise<string> {
-  const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
+  const response = await promptLocalModel({
+    systemPrompt: [
+      'You repair a broken Playwright Page Object for the live CoinMarketCap website',
+      '(coinmarketcap.com) after its DOM changed and a locator no longer matches.',
+      'You are given the current TypeScript source of the page object, the Playwright',
+      'error(s) from the failing test(s), and a fresh ARIA snapshot of the live page in',
+      'the area the locators target.',
+      'Reply with ONLY the complete corrected TypeScript file contents, no markdown',
+      'fences and no commentary before or after. Change only what is broken (selectors',
+      'that no longer resolve); preserve everything else exactly, including the existing',
+      'code style (no semicolons, single quotes, 2-space indent).',
+    ].join(' '),
+    userPrompt: [
+      '## Failing test error(s)',
+      '```',
+      params.errorSummary,
+      '```',
+      '',
+      '## Live page ARIA snapshot (area the locators target)',
+      '```yaml',
+      params.liveSnapshot,
+      '```',
+      '',
+      '## Current page object source',
+      '```typescript',
+      params.pageObjectSource,
+      '```',
+    ].join('\n'),
+  })
 
-  const llama = await getLlama()
-  const model = await llama.loadModel({ modelPath })
-  const context = await model.createContext({ contextSize: 8192 })
-
-  try {
-    const session = new LlamaChatSession({
-      contextSequence: context.getSequence(),
-      systemPrompt: [
-        'You repair a broken Playwright Page Object for the live CoinMarketCap website',
-        '(coinmarketcap.com) after its DOM changed and a locator no longer matches.',
-        'You are given the current TypeScript source of the page object, the Playwright',
-        'error(s) from the failing test(s), and a fresh ARIA snapshot of the live page in',
-        'the area the locators target.',
-        'Reply with ONLY the complete corrected TypeScript file contents, no markdown',
-        'fences and no commentary before or after. Change only what is broken (selectors',
-        'that no longer resolve); preserve everything else exactly, including the existing',
-        'code style (no semicolons, single quotes, 2-space indent).',
-      ].join(' '),
-    })
-
-    const response = await session.prompt(
-      [
-        '## Failing test error(s)',
-        '```',
-        params.errorSummary,
-        '```',
-        '',
-        '## Live page ARIA snapshot (area the locators target)',
-        '```yaml',
-        params.liveSnapshot,
-        '```',
-        '',
-        '## Current page object source',
-        '```typescript',
-        params.pageObjectSource,
-        '```',
-      ].join('\n')
-    )
-
-    return stripCodeFence(response)
-  } finally {
-    await context.dispose()
-    await model.dispose()
-    await llama.dispose()
-  }
+  return stripCodeFence(response)
 }
 
 function commitHealedLocator(): void {
@@ -270,7 +251,37 @@ async function main(): Promise<void> {
     return
   }
 
-  console.log('[coinmarketcap-navigation] self-heal verified, committing')
+  console.log('[coinmarketcap-navigation] self-heal verified, auditing patch before commit')
+  const audit = await auditChange({
+    systemPrompt: [
+      'You audit an automated patch to a Playwright Page Object for a live website,',
+      'proposed by another LLM to fix a failing locator. You are given the original',
+      'source and the patched source. Flag CRITICAL if the diff changes anything beyond',
+      'locator selectors - assertions, method signatures, exported members, or unrelated',
+      'logic - or if a new selector looks suspiciously broad or fragile (a bare tag',
+      'selector, or a selector keyed on visible text likely to change). Otherwise PASS.',
+    ].join(' '),
+    userPrompt: [
+      '## Original source',
+      '```typescript',
+      originalSource,
+      '```',
+      '',
+      '## Patched source',
+      '```typescript',
+      patchedSource,
+      '```',
+    ].join('\n'),
+  })
+
+  if (audit.critical) {
+    fs.writeFileSync(PAGE_OBJECT_PATH, originalSource)
+    reportAuditBlock('CoinMarketCap navigation locator patch (reverted)', audit.reasoning)
+    process.exitCode = 1
+    return
+  }
+
+  console.log('[coinmarketcap-navigation] auditor passed the patch, committing')
   commitHealedLocator()
 }
 

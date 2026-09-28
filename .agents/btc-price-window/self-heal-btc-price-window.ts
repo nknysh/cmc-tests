@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { execSync } from 'node:child_process'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { readBtcPriceWindow, writeBtcPriceWindow } from './btcPriceWindow'
+import { auditChange, reportAuditBlock } from '../self-heal-commit-auditor/auditChange.mts'
 
 const WINDOW_JSON_GIT_PATH = '.agents/btc-price-window/btc-price-window.json'
 const SYMBOL_BTC = 'BTC'
@@ -52,6 +53,33 @@ export default async function globalSetup(): Promise<void> {
     `[self-heal-btc-price-window] price ${price} outside [${window.min}, ${window.max}], recentring to [${newMin}, ${newMax}]`
   )
 
+  const audit = await auditChange({
+    systemPrompt: [
+      'You audit an automated recentring of a BTC price-alert window used by a test',
+      'assertion. You are given the old window, the live BTC price that triggered the',
+      'recentre, and the proposed new window. Flag CRITICAL if: the price is',
+      'non-positive or implausible for BTC, the new window width does not match the old',
+      'width, the bounds are inverted (min >= max), or the shift from the old window is',
+      'wildly disproportionate to normal BTC volatility over a several-hour interval.',
+      'Otherwise PASS.',
+    ].join(' '),
+    userPrompt: [
+      `old window: min=${window.min}, max=${window.max}, width=${width}`,
+      `fetched price: ${price}`,
+      `proposed new window: min=${newMin}, max=${newMax}, width=${newMax - newMin}`,
+    ].join('\n'),
+  })
+
+  if (audit.critical) {
+    reportAuditBlock('BTC price window recentring (window left unchanged)', audit.reasoning)
+    // A plain warning would leave a blocked recentring silently invisible in
+    // CI, since nothing else in this script fails the job - force the job
+    // red so it's not missed among otherwise-green runs.
+    process.exitCode = 1
+    return
+  }
+
+  console.log('[self-heal-btc-price-window] auditor passed the recentring, committing')
   writeBtcPriceWindow({ min: newMin, max: newMax })
   commitHealedWindow()
 }
