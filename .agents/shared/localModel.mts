@@ -8,48 +8,34 @@ import { getLlama, resolveModelFile, LlamaChatSession } from 'node-llama-cpp'
 export const MODEL_URI = 'hf:Qwen/Qwen2.5-Coder-7B-Instruct-GGUF:Q4_K_M'
 export const MODELS_DIR = path.join(process.cwd(), '.agents/coinmarketcap-navigation/models')
 
-export interface LocalModel {
-  prompt(params: { systemPrompt: string; userPrompt: string; contextSize?: number }): Promise<string>
-  dispose(): Promise<void>
-}
-
-// Loading the model weights (~4.7GB, minutes on CPU) is the expensive part -
-// a caller making multiple prompts in one run (e.g. propose-a-fix then
-// audit-the-fix) should load once via this and reuse it, rather than paying
-// that cost per prompt. A fresh context/sequence is still created per prompt
-// call, which is comparatively cheap, so prompts don't share conversation
-// history with each other.
-export async function loadLocalModel(): Promise<LocalModel> {
-  const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
-  const llama = await getLlama()
-  const model = await llama.loadModel({ modelPath })
-
-  return {
-    async prompt({ systemPrompt, userPrompt, contextSize = 8192 }) {
-      const context = await model.createContext({ contextSize })
-      try {
-        const session = new LlamaChatSession({ contextSequence: context.getSequence(), systemPrompt })
-        return await session.prompt(userPrompt)
-      } finally {
-        await context.dispose()
-      }
-    },
-    async dispose() {
-      await model.dispose()
-      await llama.dispose()
-    },
-  }
-}
-
+// Loads, prompts once, and disposes - a caller needing two prompts in one run
+// (e.g. propose-a-fix then audit-the-fix) pays for two full loads rather than
+// keeping the ~4.7GB model resident between them. That's intentional when a
+// heavyweight step (a headless-browser Playwright run) sits between the two
+// prompts: keeping the model loaded across it would stack its memory
+// footprint on top of Chromium's during the phase most likely to be
+// memory-constrained on a standard CI runner.
 export async function promptLocalModel(params: {
   systemPrompt: string
   userPrompt: string
   contextSize?: number
 }): Promise<string> {
-  const model = await loadLocalModel()
+  const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
+
+  const llama = await getLlama()
+  const model = await llama.loadModel({ modelPath })
+  const context = await model.createContext({ contextSize: params.contextSize ?? 8192 })
+
   try {
-    return await model.prompt(params)
+    const session = new LlamaChatSession({
+      contextSequence: context.getSequence(),
+      systemPrompt: params.systemPrompt,
+    })
+
+    return await session.prompt(params.userPrompt)
   } finally {
+    await context.dispose()
     await model.dispose()
+    await llama.dispose()
   }
 }

@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { promptLocalModel, type LocalModel } from '../shared/localModel.mts'
+import { promptLocalModel } from '../shared/localModel.mts'
 
 const VERDICT_LINE = /^VERDICT:\s*(PASS|CRITICAL)\b/i
 
@@ -14,14 +14,8 @@ export async function auditChange(params: {
   systemPrompt: string
   userPrompt: string
   contextSize?: number
-  // Pass an already-loaded model (see loadLocalModel) when the caller also
-  // makes another local-model call in the same run, so the ~4.7GB weights
-  // are loaded once instead of once per call. Defaults to a fresh one-off
-  // load for callers that only ever audit.
-  model?: LocalModel
 }): Promise<{ critical: boolean; reasoning: string }> {
-  const prompt = params.model ? params.model.prompt.bind(params.model) : promptLocalModel
-  const response = await prompt({
+  const response = await promptLocalModel({
     systemPrompt: `${params.systemPrompt} ${FORMAT_INSTRUCTION}`,
     userPrompt: params.userPrompt,
     contextSize: params.contextSize,
