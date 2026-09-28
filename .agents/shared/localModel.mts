@@ -15,6 +15,18 @@ export const MODELS_DIR = path.join(process.cwd(), '.agents/coinmarketcap-naviga
 // prompts: keeping the model loaded across it would stack its memory
 // footprint on top of Chromium's during the phase most likely to be
 // memory-constrained on a standard CI runner.
+// Disposal is nested per resource (rather than three sequential awaits in one
+// finally) so that: (1) a failure partway through acquisition only disposes
+// what was actually acquired, and (2) one dispose throwing doesn't skip the
+// others or mask whatever error the finally block is already unwinding for.
+async function disposeQuietly(name: string, dispose: () => Promise<void>): Promise<void> {
+  try {
+    await dispose()
+  } catch (error) {
+    console.warn(`[localModel] failed to dispose ${name}`, error)
+  }
+}
+
 export async function promptLocalModel(params: {
   systemPrompt: string
   userPrompt: string
@@ -23,19 +35,24 @@ export async function promptLocalModel(params: {
   const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
 
   const llama = await getLlama()
-  const model = await llama.loadModel({ modelPath })
-  const context = await model.createContext({ contextSize: params.contextSize ?? 8192 })
-
   try {
-    const session = new LlamaChatSession({
-      contextSequence: context.getSequence(),
-      systemPrompt: params.systemPrompt,
-    })
+    const model = await llama.loadModel({ modelPath })
+    try {
+      const context = await model.createContext({ contextSize: params.contextSize ?? 8192 })
+      try {
+        const session = new LlamaChatSession({
+          contextSequence: context.getSequence(),
+          systemPrompt: params.systemPrompt,
+        })
 
-    return await session.prompt(params.userPrompt)
+        return await session.prompt(params.userPrompt)
+      } finally {
+        await disposeQuietly('context', () => context.dispose())
+      }
+    } finally {
+      await disposeQuietly('model', () => model.dispose())
+    }
   } finally {
-    await context.dispose()
-    await model.dispose()
-    await llama.dispose()
+    await disposeQuietly('llama', () => llama.dispose())
   }
 }
