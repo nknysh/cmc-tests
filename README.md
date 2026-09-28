@@ -90,6 +90,62 @@ Stop it with `Ctrl+C`. The server only listens on `127.0.0.1`. Restart it after 
 
 Test case URLs are shareable, e.g. `http://127.0.0.1:4000/#case/2` (also `#suite/<id>` and `#unsorted`).
 
+## Agents, skills & hooks
+
+```mermaid
+flowchart TD
+    subgraph dev["Local development (Claude Code)"]
+        CC["Claude Code CLI"]
+        SK_API["api-testing skill"]
+        SK_E2E["e2e-testing skill"]
+        SK_TD["test-design skill"]
+        CC -->|"adding/editing src/clients or tests/api"| SK_API
+        CC -->|"writing E2E specs / page objects"| SK_E2E
+        CC -->|"planning test coverage"| SK_TD
+    end
+
+    subgraph precommit["git commit (interactive)"]
+        DEV["git commit"] --> HUSKY["Husky pre-commit hook"]
+        HUSKY -->|"npm run lint"| LINT["ESLint"]
+        HUSKY -->|"npm run code-review"| HOOK["PreCommitCodeReviewHook.mts"]
+        HOOK -->|"headless claude -p, read-only"| SK_REVIEW["typescript-code-review skill"]
+        SK_REVIEW -->|"🔴 critical finding"| BLOCK["commit blocked"]
+        SK_REVIEW -->|"pass / non-critical only"| ALLOW["commit allowed"]
+    end
+
+    subgraph heal["Self-healing agents (commit with --no-verify, skip the hook above)"]
+        WF_BTC["btc-price-window-heal.yml (cron 4h)"] -->|"--project=btc-price"| GS
+        WF_API["api-tests.yml (cron 6h)"] -->|"--project=api"| GS
+        GS["Playwright globalSetup<br/>(runs every test session)"] --> BTC["self-heal-btc-price-window.ts"]
+        BTC -->|"live price outside [min,max]"| RECENTER["compute recentred window"]
+        RECENTER --> AUDITOR
+
+        WF_NAV["coinmarketcap-navigation-heal.yml (cron daily)"] --> NAV["self-heal-navigation-locators.mts"]
+        NAV -->|"locator-shaped failure in tests/e2e"| LLM_NAV["local LLM patch"]
+        LLM_NAV --> REVERIFY["re-run e2e suite"]
+        REVERIFY -->|"fix confirmed"| AUDITOR
+
+        AUDITOR["auditChange.mts<br/>(shared commit auditor)"]
+        AUDITOR -->|"VERDICT: PASS"| COMMIT_HEAL["git commit --no-verify"]
+        AUDITOR -->|"VERDICT: CRITICAL / unparseable"| REVERT["discard change, leave prior state"]
+        COMMIT_HEAL -.->|writes| WINDOW["btc-price-window.json"]
+        COMMIT_HEAL -.->|writes| LOCATORS["CoinMarketCapHomePage.ts"]
+    end
+
+    subgraph localmodel["Shared local inference"]
+        LOCALMODEL["localModel.mts<br/>(node-llama-cpp)"]
+        GGUF["Qwen2.5-Coder-7B-Instruct GGUF<br/>(gitignored model cache)"]
+        LOCALMODEL --> GGUF
+    end
+
+    LLM_NAV -->|"promptLocalModel()"| LOCALMODEL
+    AUDITOR -->|"promptLocalModel()"| LOCALMODEL
+```
+
+- **Skills** (`api-testing`, `e2e-testing`, `test-design`, `typescript-code-review`) are conventions Claude Code loads for a matching task — the first three during interactive development, the last one only inside the headless review invoked by the pre-commit hook.
+- **Hooks**: the Husky `pre-commit` hook is the only one wired into `git commit` directly; it runs lint then `PreCommitCodeReviewHook.mts`, which blocks on 🔴 critical findings from the `typescript-code-review` skill. Both self-heal agents deliberately bypass it (`--no-verify`) since they depend on a local model instead of the paid `claude -p` call this hook makes.
+- **Agents**: the BTC price window heal (triggered by every Playwright run via `globalSetup`, and by its own and the API-tests cron workflows) and the navigation locator heal (its own daily cron) each propose a change, then both route through the same `auditChange.mts` gate before committing — the one guardrail standing in for the pre-commit hook they skip. Patch generation (navigation heal) and the audit itself both call the same `localModel.mts` helper, which drives the shared, gitignored, locally-cached GGUF model.
+
 ## Project layout
 
 ```
