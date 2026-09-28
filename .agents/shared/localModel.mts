@@ -7,7 +7,7 @@ import path from 'node:path'
 // top-level await"). A dynamic import() always goes through Node's ESM loader
 // regardless of the caller's own module system, so it works from both that
 // require()-based path and the navigation heal's direct `node script.mts` (ESM).
-async function loadNodeLlamaCpp() {
+async function loadNodeLlamaCpp(): Promise<typeof import('node-llama-cpp')> {
   return import('node-llama-cpp')
 }
 
