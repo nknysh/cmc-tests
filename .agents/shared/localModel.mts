@@ -8,27 +8,48 @@ import { getLlama, resolveModelFile, LlamaChatSession } from 'node-llama-cpp'
 export const MODEL_URI = 'hf:Qwen/Qwen2.5-Coder-7B-Instruct-GGUF:Q4_K_M'
 export const MODELS_DIR = path.join(process.cwd(), '.agents/coinmarketcap-navigation/models')
 
+export interface LocalModel {
+  prompt(params: { systemPrompt: string; userPrompt: string; contextSize?: number }): Promise<string>
+  dispose(): Promise<void>
+}
+
+// Loading the model weights (~4.7GB, minutes on CPU) is the expensive part -
+// a caller making multiple prompts in one run (e.g. propose-a-fix then
+// audit-the-fix) should load once via this and reuse it, rather than paying
+// that cost per prompt. A fresh context/sequence is still created per prompt
+// call, which is comparatively cheap, so prompts don't share conversation
+// history with each other.
+export async function loadLocalModel(): Promise<LocalModel> {
+  const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
+  const llama = await getLlama()
+  const model = await llama.loadModel({ modelPath })
+
+  return {
+    async prompt({ systemPrompt, userPrompt, contextSize = 8192 }) {
+      const context = await model.createContext({ contextSize })
+      try {
+        const session = new LlamaChatSession({ contextSequence: context.getSequence(), systemPrompt })
+        return await session.prompt(userPrompt)
+      } finally {
+        await context.dispose()
+      }
+    },
+    async dispose() {
+      await model.dispose()
+      await llama.dispose()
+    },
+  }
+}
+
 export async function promptLocalModel(params: {
   systemPrompt: string
   userPrompt: string
   contextSize?: number
 }): Promise<string> {
-  const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
-
-  const llama = await getLlama()
-  const model = await llama.loadModel({ modelPath })
-  const context = await model.createContext({ contextSize: params.contextSize ?? 8192 })
-
+  const model = await loadLocalModel()
   try {
-    const session = new LlamaChatSession({
-      contextSequence: context.getSequence(),
-      systemPrompt: params.systemPrompt,
-    })
-
-    return await session.prompt(params.userPrompt)
+    return await model.prompt(params)
   } finally {
-    await context.dispose()
     await model.dispose()
-    await llama.dispose()
   }
 }

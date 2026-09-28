@@ -25,6 +25,16 @@ jobs:
 
       - run: npm ci
 
+      # The btc-price-window self-heal's globalSetup runs here too (it fires for
+      # every project) and audits any recentring with the same local GGUF model
+      # the navigation heal uses - cache it so a price drift during this
+      # workflow doesn't cold-download ~4.7GB.
+      - name: Cache local GGUF model
+        uses: actions/cache@v4
+        with:
+          path: .agents/coinmarketcap-navigation/models
+          key: qwen2.5-coder-7b-instruct-q4_k_m-gguf
+
       - run: npx playwright test --project=api
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}

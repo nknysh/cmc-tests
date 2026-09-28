@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { chromium } from '@playwright/test'
 import type { JSONReport, JSONReportSuite } from '@playwright/test/reporter'
-import { promptLocalModel } from '../shared/localModel.mts'
+import { loadLocalModel, type LocalModel } from '../shared/localModel.mts'
 import { auditChange, reportAuditBlock } from '../self-heal-commit-auditor/auditChange.mts'
 
 // Assumes invocation from the repo root (true for both the CI workflow and
@@ -143,8 +143,9 @@ async function proposeFix(params: {
   pageObjectSource: string
   errorSummary: string
   liveSnapshot: string
+  model: LocalModel
 }): Promise<string> {
-  const response = await promptLocalModel({
+  const response = await params.model.prompt({
     systemPrompt: [
       'You repair a broken Playwright Page Object for the live CoinMarketCap website',
       '(coinmarketcap.com) after its DOM changed and a locator no longer matches.',
@@ -223,66 +224,80 @@ async function main(): Promise<void> {
   const errorSummary = locatorFailures.map(f => `${f.title}\n${f.error}`).join('\n\n')
   const liveSnapshot = await captureLiveContext()
 
-  const patchedSource = await proposeFix({ pageObjectSource: originalSource, errorSummary, liveSnapshot })
-
-  if (patchedSource === originalSource) {
-    console.error('[coinmarketcap-navigation] local model proposed no change; leaving failure for a human')
-    process.exitCode = 1
-    return
-  }
-
-  console.log('[coinmarketcap-navigation] proposed patch:')
-  console.log(patchedSource)
-
-  fs.writeFileSync(PAGE_OBJECT_PATH, patchedSource)
-
-  console.log('[coinmarketcap-navigation] re-running tests to verify the patch')
-  let verified = false
+  // Loaded once and reused for both the fix proposal and its audit below -
+  // loading the ~4.7GB weights is the expensive part of a local-model call,
+  // so sharing one load across both prompts roughly halves this script's
+  // runtime versus loading fresh for each.
+  const model = await loadLocalModel()
   try {
-    verified = runE2ETests().passed
+    const patchedSource = await proposeFix({ pageObjectSource: originalSource, errorSummary, liveSnapshot, model })
+
+    if (patchedSource === originalSource) {
+      console.error('[coinmarketcap-navigation] local model proposed no change; leaving failure for a human')
+      process.exitCode = 1
+      return
+    }
+
+    console.log('[coinmarketcap-navigation] proposed patch:')
+    console.log(patchedSource)
+
+    fs.writeFileSync(PAGE_OBJECT_PATH, patchedSource)
+
+    console.log('[coinmarketcap-navigation] re-running tests to verify the patch')
+    let verified = false
+    try {
+      verified = runE2ETests().passed
+    } finally {
+      // Also runs if verification throws, so a patched file is never left behind unverified.
+      if (!verified) fs.writeFileSync(PAGE_OBJECT_PATH, originalSource)
+    }
+
+    if (!verified) {
+      console.error('[coinmarketcap-navigation] patched locator still fails, reverted')
+      process.exitCode = 1
+      return
+    }
+
+    console.log('[coinmarketcap-navigation] self-heal verified, auditing patch before commit')
+    const audit = await auditChange({
+      systemPrompt: [
+        'You audit an automated patch to a Playwright Page Object for a live website,',
+        'proposed by another LLM to fix a failing locator. You are given the original',
+        'source and the patched source. Flag CRITICAL if the diff changes anything beyond',
+        'locator selectors - assertions, method signatures, exported members, or unrelated',
+        'logic - or if a new selector looks suspiciously broad or fragile (a bare tag',
+        'selector, or a selector keyed on visible text likely to change). Otherwise PASS.',
+      ].join(' '),
+      userPrompt: [
+        '## Original source',
+        '```typescript',
+        originalSource,
+        '```',
+        '',
+        '## Patched source',
+        '```typescript',
+        patchedSource,
+        '```',
+      ].join('\n'),
+      // Holds two full copies of the page object plus the failing-test
+      // errors - bigger than the 8192 default, which risks silently
+      // truncating the prompt (and so the verdict) for a larger page object.
+      contextSize: 16384,
+      model,
+    })
+
+    if (audit.critical) {
+      fs.writeFileSync(PAGE_OBJECT_PATH, originalSource)
+      reportAuditBlock('CoinMarketCap navigation locator patch (reverted)', audit.reasoning)
+      process.exitCode = 1
+      return
+    }
+
+    console.log('[coinmarketcap-navigation] auditor passed the patch, committing')
+    commitHealedLocator()
   } finally {
-    // Also runs if verification throws, so a patched file is never left behind unverified.
-    if (!verified) fs.writeFileSync(PAGE_OBJECT_PATH, originalSource)
+    await model.dispose()
   }
-
-  if (!verified) {
-    console.error('[coinmarketcap-navigation] patched locator still fails, reverted')
-    process.exitCode = 1
-    return
-  }
-
-  console.log('[coinmarketcap-navigation] self-heal verified, auditing patch before commit')
-  const audit = await auditChange({
-    systemPrompt: [
-      'You audit an automated patch to a Playwright Page Object for a live website,',
-      'proposed by another LLM to fix a failing locator. You are given the original',
-      'source and the patched source. Flag CRITICAL if the diff changes anything beyond',
-      'locator selectors - assertions, method signatures, exported members, or unrelated',
-      'logic - or if a new selector looks suspiciously broad or fragile (a bare tag',
-      'selector, or a selector keyed on visible text likely to change). Otherwise PASS.',
-    ].join(' '),
-    userPrompt: [
-      '## Original source',
-      '```typescript',
-      originalSource,
-      '```',
-      '',
-      '## Patched source',
-      '```typescript',
-      patchedSource,
-      '```',
-    ].join('\n'),
-  })
-
-  if (audit.critical) {
-    fs.writeFileSync(PAGE_OBJECT_PATH, originalSource)
-    reportAuditBlock('CoinMarketCap navigation locator patch (reverted)', audit.reasoning)
-    process.exitCode = 1
-    return
-  }
-
-  console.log('[coinmarketcap-navigation] auditor passed the patch, committing')
-  commitHealedLocator()
 }
 
 main().catch(error => {
