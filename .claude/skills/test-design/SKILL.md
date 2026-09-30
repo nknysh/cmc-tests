@@ -166,6 +166,23 @@ proves the data is correct, an E2E test covering the same flow should focus
 on whether the UI renders and reacts to it correctly, not re-verify the
 underlying value.
 
+## One Flat Suite per API Endpoint
+
+For API tests, each API endpoint is represented by exactly one flat test
+suite, named `<Name> — <METHOD> <path>` (e.g. `Simple Price — GET
+/v2/simple/price`). Don't split an endpoint's suite into sub-suites by
+parameter or concern (identifier resolution, auth, precision, …): every
+test case for that endpoint lives directly in its suite.
+
+This applies in both places a suite exists:
+- the test case database (`data/test-cases.db`): the endpoint suite has
+  no child suites, and its test cases are attached to it directly;
+- the spec: one `test.describe` per endpoint, with no nested
+  `test.describe` blocks inside it.
+
+Grouping comes from descriptive test names (e.g. `precision=0 rounds
+price to a whole number`), not from child suites.
+
 ## Deterministic Over Flaky
 
 A test that passes or fails based on timing, network jitter, or unrelated
