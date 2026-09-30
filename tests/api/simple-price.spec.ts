@@ -1,11 +1,14 @@
 import { test, expect } from '@playwright/test'
+import * as allure from 'allure-js-commons'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 
 /**
  * Test cases for GET /v2/simple/price. Each test is mapped to its source
  * test case in data/test-cases.db (see src/db/testCases/) via the
  * `test-case-id` annotation, which matches that database's `test_cases.id`.
- * Tests below are ordered by that id.
+ * Tests below are ordered by that id. The same id is used as each test's
+ * Allure id, testCaseId and historyId, so Allure history survives renames of
+ * a test or its suite.
  *
  * Not every seeded test case is automated here:
  * - TC-08 (ambiguous symbol collision) needs a real colliding symbol example.
@@ -31,6 +34,14 @@ const CURRENCY_ID_USD = '2781'
 
 test.describe('CoinMarketCap API', () => {
   test.describe('Simple Price — GET /v2/simple/price', () => {
+    test.beforeEach(async ({}, testInfo) => {
+      const testCaseId = testInfo.annotations.find((a) => a.type === 'test-case-id')?.description
+      expect(testCaseId, 'every test needs a test-case-id annotation').toBeTruthy()
+      await allure.allureId(testCaseId!)
+      await allure.testCaseId(`test-case-${testCaseId}`)
+      await allure.historyId(`test-case-${testCaseId}`)
+    })
+
     test(
       'resolves a known asset by id',
       { annotation: { type: 'test-case-id', description: '1' } },
