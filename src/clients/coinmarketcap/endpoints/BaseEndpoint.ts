@@ -1,4 +1,16 @@
+import type { CmcApiStatus } from '../types'
+
 const API_KEY_HEADER = 'X-CMC_PRO_API_KEY'
+
+/** Formats CMC's `status.error_code`/`error_message` for an error body, or '' if the body isn't a CMC status. */
+function describeApiError(responseText: string): string {
+  try {
+    const { status } = JSON.parse(responseText) as { status?: CmcApiStatus }
+    return status?.error_code ? ` (error_code ${status.error_code}: ${status.error_message})` : ''
+  } catch {
+    return ''
+  }
+}
 
 export interface EndpointOptions {
   apiKey: string
@@ -49,7 +61,9 @@ export abstract class BaseEndpoint {
     })
 
     if (!response.ok) {
-      throw new Error(`CoinMarketCap API request failed: ${response.status} ${response.statusText}`)
+      throw new Error(
+        `CoinMarketCap API request failed: ${response.status} ${response.statusText}${describeApiError(responseText)}`,
+      )
     }
 
     return responseText

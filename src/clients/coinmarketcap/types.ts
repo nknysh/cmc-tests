@@ -89,3 +89,67 @@ export interface SimplePriceResponse {
   }>
   status: CmcApiStatus
 }
+
+export type GainersLosersTimePeriod = '1h' | '24h' | '7d' | '30d'
+export type GainersLosersSort = 'percent_change_24h'
+export type SortDirection = 'asc' | 'desc'
+
+export interface GainersLosersOptions {
+  /** 1-based offset into the ranked list. API default: 1. */
+  start?: number
+  /** Number of results, 1–1000. API default: 100. */
+  limit?: number
+  /** Window for gains/losses. API default: 24h. */
+  timePeriod?: GainersLosersTimePeriod
+  /** Comma-separated fiat/crypto symbols to convert into. Cannot be combined with convertId. */
+  convert?: string
+  /** Comma-separated CoinMarketCap currency IDs to convert into. Cannot be combined with convert. */
+  convertId?: string
+  sort?: GainersLosersSort
+  /** desc = biggest gainers first, asc = biggest losers first. */
+  sortDir?: SortDirection
+}
+
+export interface GainersLosersQuote {
+  /** The quote's key in the response: a symbol for `convert`, a currency id for `convertId`. */
+  currency: string
+  price: number
+  percentChange1h: number
+  percentChange24h: number
+  percentChange7d: number
+  percentChange30d: number
+}
+
+export interface GainersLosersEntry {
+  id: number
+  name: string
+  symbol: string
+  slug: string
+  quotes: GainersLosersQuote[]
+}
+
+export interface GainersLosersResult {
+  entries: GainersLosersEntry[]
+  /** Call credits the API charged for this request (status.credit_count). */
+  creditCount: number
+}
+
+export interface GainersLosersResponse {
+  data: Array<{
+    id: number
+    name: string
+    symbol: string
+    slug: string
+    quote: Record<
+      string,
+      {
+        price: number
+        percent_change_1h: number
+        percent_change_24h: number
+        percent_change_7d: number
+        percent_change_30d: number
+      }
+    >
+  }>
+  status: CmcApiStatus
+}

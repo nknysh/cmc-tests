@@ -1,6 +1,14 @@
+import { GainersLosersEndpoint } from './endpoints/GainersLosersEndpoint'
 import { QuotesLatestEndpoint } from './endpoints/QuotesLatestEndpoint'
 import { SimplePriceEndpoint } from './endpoints/SimplePriceEndpoint'
-import type { CoinMarketCapClientOptions, Price, SimplePriceEntry, SimplePriceOptions } from './types'
+import type {
+  CoinMarketCapClientOptions,
+  GainersLosersOptions,
+  GainersLosersResult,
+  Price,
+  SimplePriceEntry,
+  SimplePriceOptions,
+} from './types'
 
 const DEFAULT_BASE_URL = 'https://pro-api.coinmarketcap.com'
 
@@ -10,6 +18,7 @@ const DEFAULT_BASE_URL = 'https://pro-api.coinmarketcap.com'
  * up shared config and delegates.
  */
 export class CoinMarketCapClient {
+  private readonly gainersLosers: GainersLosersEndpoint
   private readonly quotesLatest: QuotesLatestEndpoint
   private readonly simplePrice: SimplePriceEndpoint
 
@@ -17,6 +26,7 @@ export class CoinMarketCapClient {
     if (!apiKey) {
       throw new Error('CoinMarketCapClient requires an apiKey')
     }
+    this.gainersLosers = new GainersLosersEndpoint({ apiKey, baseUrl })
     this.quotesLatest = new QuotesLatestEndpoint({ apiKey, baseUrl })
     this.simplePrice = new SimplePriceEndpoint({ apiKey, baseUrl })
   }
@@ -27,5 +37,9 @@ export class CoinMarketCapClient {
 
   fetchSimplePrice(options: SimplePriceOptions): Promise<SimplePriceEntry[]> {
     return this.simplePrice.fetchSimplePrice(options)
+  }
+
+  fetchGainersLosers(options?: GainersLosersOptions): Promise<GainersLosersResult> {
+    return this.gainersLosers.fetchGainersLosers(options)
   }
 }
