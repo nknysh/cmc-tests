@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 
-# One gh-pages publisher at a time; the workflows share allure-history.jsonl.
+# One gh-pages publisher at a time; each workflow pushes to the same branch.
 concurrency:
   group: gh-pages-publish
   cancel-in-progress: false
@@ -16,6 +16,10 @@ concurrency:
 jobs:
   heal:
     runs-on: ubuntu-latest
+    # Selects this suite's own Allure results/report/history (see allurerc.mjs),
+    # so its published report never shows the other suites' results.
+    env:
+      ALLURE_SUITE: btc-price
     steps:
       - uses: actions/checkout@v7
 
@@ -35,7 +39,7 @@ jobs:
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
 
-      # Allure history lives on gh-pages so each run's results accumulate.
+      # Per-suite Allure history lives on gh-pages so each run's results accumulate.
       - name: Restore Allure history
         if: always()
         continue-on-error: true
@@ -47,15 +51,16 @@ jobs:
       - name: Generate Allure report
         if: always()
         run: |
-          cp gh-pages/allure-history.jsonl allure-history.jsonl 2>/dev/null || true
-          npx allure generate allure-results
+          mkdir -p allure-history
+          cp "gh-pages/allure-history/$ALLURE_SUITE.jsonl" allure-history/ 2>/dev/null || true
+          npx allure generate "allure-results/$ALLURE_SUITE"
 
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results
-          path: allure-results/
+          name: allure-results-btc-price
+          path: allure-results/btc-price/
           if-no-files-found: ignore
           retention-days: 30
 
@@ -65,9 +70,11 @@ jobs:
           git fetch origin gh-pages:gh-pages 2>/dev/null || git worktree add --orphan -b gh-pages _pages
           [ -d _pages ] || git worktree add _pages gh-pages
           rm -rf _pages/btc-price
-          mkdir -p _pages/btc-price
-          cp -r allure-report/. _pages/btc-price/
-          cp allure-history.jsonl _pages/allure-history.jsonl
+          mkdir -p _pages/btc-price _pages/allure-history
+          cp -r "allure-report/$ALLURE_SUITE/." _pages/btc-price/
+          cp "allure-history/$ALLURE_SUITE.jsonl" _pages/allure-history/
+          # Old history shared by all suites; superseded by allure-history/<suite>.jsonl.
+          rm -f _pages/allure-history.jsonl
           cp .github/allure-summary/index.html _pages/index.html
           cd _pages
           git add -A

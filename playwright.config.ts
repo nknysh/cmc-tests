@@ -1,6 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
 import 'dotenv/config'
 
+// Each suite (btc-price, api, navigation) writes to its own Allure results dir so
+// one suite's report never shows another's results. Unset → an 'adhoc' bucket.
+const allureSuite = process.env.ALLURE_SUITE || 'adhoc'
+
 export default defineConfig({
   globalSetup: './.agents/btc-price-window/self-heal-btc-price-window.ts',
   fullyParallel: true,
@@ -11,10 +15,16 @@ export default defineConfig({
     ['html', { outputFolder: 'playwright-report' }],
     ['list'],
     ['allure-playwright', {
-      resultsDir: 'allure-results',
+      resultsDir: `allure-results/${allureSuite}`,
       detail: true,
-      environmentInfo: { BASE_URL: process.env.BASE_URL || 'http://localhost:3000', CI: String(!!process.env.CI) },
+      environmentInfo: {
+        ALLURE_SUITE: allureSuite,
+        BASE_URL: process.env.BASE_URL || 'http://localhost:3000',
+        CI: String(!!process.env.CI),
+      },
     }],
+    // The navigation heal script reads a JSON report; it sets this env var.
+    ...(process.env.PLAYWRIGHT_JSON_OUTPUT_NAME ? [['json'] as const] : []),
   ],
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',

@@ -13,6 +13,10 @@ const REPO_ROOT = process.cwd()
 const PAGE_OBJECT_GIT_PATH = 'tests/e2e/pages/CoinMarketCapHomePage.ts'
 const PAGE_OBJECT_PATH = path.join(REPO_ROOT, PAGE_OBJECT_GIT_PATH)
 const JSON_REPORT_PATH = path.join(REPO_ROOT, '.agents/coinmarketcap-navigation/last-run.json')
+// This suite's own Allure bucket (see playwright.config.ts / allurerc.mjs), so
+// its report never mixes with the BTC price or simple price suites.
+const ALLURE_SUITE = 'navigation'
+const ALLURE_RESULTS_DIR = path.join(REPO_ROOT, 'allure-results', ALLURE_SUITE)
 
 interface TestFailure {
   title: string
@@ -25,10 +29,19 @@ function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
   fs.rmSync(JSON_REPORT_PATH, { force: true })
 
   try {
-    execSync('npx playwright test --project=e2e --reporter=json,allure-playwright', {
+    // No --reporter override: the config adds the json reporter when
+    // PLAYWRIGHT_JSON_OUTPUT_NAME is set, keeping its allure-playwright options.
+    // PLAYWRIGHT_HTML_OPEN=never stops a local failing run from blocking on the
+    // html reporter's report server.
+    execSync('npx playwright test --project=e2e', {
       cwd: REPO_ROOT,
       stdio: ['ignore', 'ignore', 'inherit'],
-      env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: JSON_REPORT_PATH },
+      env: {
+        ...process.env,
+        ALLURE_SUITE,
+        PLAYWRIGHT_JSON_OUTPUT_NAME: JSON_REPORT_PATH,
+        PLAYWRIGHT_HTML_OPEN: 'never',
+      },
     })
   } catch {
     // Playwright exits non-zero on any test failure; the JSON report is still written.
@@ -198,6 +211,10 @@ function commitHealedLocator(): void {
 }
 
 async function main(): Promise<void> {
+  // Cleared once per script run, not per runE2ETests() call, so the report
+  // records both the initial run and the post-heal re-run.
+  fs.rmSync(ALLURE_RESULTS_DIR, { recursive: true, force: true })
+
   console.log('[coinmarketcap-navigation] running e2e navigation tests')
   const initial = runE2ETests()
 

@@ -15,8 +15,8 @@ Currently the only client is `CoinMarketCapClient`, used to assert on live CoinM
 ```bash
 npm run test:api      # run tests/api except btc-price.spec.ts
 npm run test:btc-price # run only btc-price.spec.ts
-npm run allure:generate # build allure-report/ from allure-results/ (appends to allure-history.jsonl)
-npm run test:allure   # run all specs, then generate the Allure report even if tests failed
+npm run allure:api     # build allure-report/api/ from allure-results/api/ (also allure:btc-price, allure:navigation)
+npm run test:allure   # run each suite, then generate its own Allure report even if tests failed
 npx playwright test tests/api/simple-price.spec.ts   # run a single file
 npx playwright test -g "BTC price is above threshold"  # run a single test by title
 npx tsc --noEmit      # type-check without emitting
@@ -33,7 +33,7 @@ After lint, the hook also runs `PreCommitCodeReviewHook` (`.agents/code-review-h
 
 ## Allure reporting
 
-`allurerc.mjs` configures Allure 3 (`allure generate`) with `appendHistory`, so each generated report adds the run to `allure-history.jsonl`. Results, report and history are gitignored locally. In CI, the two heal workflows and `api-tests.yml` restore history from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/`, `navigation/` or `api/` (the `api-tests.yml` workflow runs `--project=api`, i.e. the simple-price spec, every 6 hours plus `workflow_dispatch`) and a summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links all three and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script runs its inner suite with `--reporter=json,allure-playwright` so heal re-runs are recorded too.
+Each suite is fully isolated by the `ALLURE_SUITE` env var (`btc-price`, `api` = simple price, `navigation`; unset → `adhoc`): `playwright.config.ts` writes results to `allure-results/<suite>/`, and `allurerc.mjs` (Allure 3, `appendHistory`) generates `allure-report/<suite>/` and appends to `allure-history/<suite>.jsonl`. The `test:api`/`test:btc-price`/`test:e2e` scripts set the key and clear that suite's results dir before running. Results, reports and history are gitignored locally. In CI, each of the two heal workflows and `api-tests.yml` sets `ALLURE_SUITE` at job level, restores its own `allure-history/<suite>.jsonl` from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/`, `navigation/` or `api/` (the `api-tests.yml` workflow runs `--project=api`, i.e. the simple-price spec, every 6 hours plus `workflow_dispatch`) and a summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links all three and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script sets `ALLURE_SUITE=navigation` and `PLAYWRIGHT_JSON_OUTPUT_NAME` (which makes the config add the `json` reporter), clearing `allure-results/navigation/` once per script run so heal re-runs are recorded too.
 
 ## Environment
 

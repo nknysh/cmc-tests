@@ -3,7 +3,7 @@ playwright-report/
 test-results/
 allure-results/
 allure-report/
-allure-history.jsonl
+allure-history/
 .DS_Store
 *.log
 .env
