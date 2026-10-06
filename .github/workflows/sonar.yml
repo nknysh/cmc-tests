@@ -1,0 +1,38 @@
+name: SonarQube Cloud
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+    steps:
+      # Full history so Sonar can detect new code and blame lines.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - run: npm ci
+
+      # Report only; lint findings surface through Sonar's quality gate.
+      - name: ESLint report
+        run: npx eslint tests -f json -o eslint-report.json || true
+
+      # Static analysis only (see sonar-project.properties) - no tests run, so
+      # no CMC_API_KEY. sonar.qualitygate.wait makes this step fail on a red gate.
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

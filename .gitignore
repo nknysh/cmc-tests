@@ -14,3 +14,7 @@ data/*.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# SonarQube scanner
+eslint-report.json
+.scannerwork/
