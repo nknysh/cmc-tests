@@ -33,6 +33,6 @@ jobs:
       # Static analysis only (see sonar-project.properties) - no tests run, so
       # no CMC_API_KEY. sonar.qualitygate.wait makes this step fail on a red gate.
       - name: SonarQube Cloud scan
-        uses: SonarSource/sonarqube-scan-action@v8
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
