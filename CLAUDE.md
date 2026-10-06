@@ -13,8 +13,9 @@ Currently the only client is `CoinMarketCapClient`, used to assert on live CoinM
 ## Commands
 
 ```bash
-npm run test:api      # run tests/api except btc-price.spec.ts
+npm run test:api      # run tests/api except btc-price.spec.ts, plus tests/contract
 npm run test:btc-price # run only btc-price.spec.ts
+npm run test:contract # run tests/contract (test:api also runs it)
 npm run test:e2e      # run tests/e2e (the navigation suite)
 npm run allure:api     # build allure-report/api/ from allure-results/api/ (also allure:btc-price, allure:navigation)
 npm run test:allure   # run each suite, then generate its own Allure report even if tests failed
@@ -34,7 +35,7 @@ After lint, the hook also runs `PreCommitCodeReviewHook` (`.agents/code-review-h
 
 ## Allure reporting
 
-Each suite is fully isolated by the `ALLURE_SUITE` env var (`btc-price`, `api` = simple price + gainers-losers, `navigation`; unset → `adhoc`): `playwright.config.ts` writes results to `allure-results/<suite>/`, and `allurerc.mjs` (Allure 3, `appendHistory`) generates `allure-report/<suite>/` and appends to `allure-history/<suite>.jsonl`. The `test:api`/`test:btc-price`/`test:e2e` scripts set the key and clear that suite's results dir before running. Results, reports and history are gitignored locally. In CI, each of the two heal workflows and `api-tests.yml` sets `ALLURE_SUITE` at job level, restores its own `allure-history/<suite>.jsonl` from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/`, `navigation/` or `api/` (the `api-tests.yml` workflow runs `--project=api`, i.e. the simple-price and gainers-losers specs, every 6 hours plus `workflow_dispatch`) and a summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links all three and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script sets `ALLURE_SUITE=navigation` and `PLAYWRIGHT_JSON_OUTPUT_NAME` (which makes the config add the `json` reporter), clearing `allure-results/navigation/` once per script run so heal re-runs are recorded too.
+Each suite is fully isolated by the `ALLURE_SUITE` env var (`btc-price`, `api` = simple price + gainers-losers, `navigation`; unset → `adhoc`): `playwright.config.ts` writes results to `allure-results/<suite>/`, and `allurerc.mjs` (Allure 3, `appendHistory`) generates `allure-report/<suite>/` and appends to `allure-history/<suite>.jsonl`. The `test:api`/`test:btc-price`/`test:e2e` scripts set the key and clear that suite's results dir before running. Results, reports and history are gitignored locally. In CI, each of the two heal workflows and `api-tests.yml` sets `ALLURE_SUITE` at job level, restores its own `allure-history/<suite>.jsonl` from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/`, `navigation/` or `api/` (the `api-tests.yml` workflow runs `--project=contract` then `--project=api` as separate steps, i.e. the contract tests followed by the simple-price and gainers-losers specs, every 6 hours plus `workflow_dispatch`) and a summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links all three and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script sets `ALLURE_SUITE=navigation` and `PLAYWRIGHT_JSON_OUTPUT_NAME` (which makes the config add the `json` reporter), clearing `allure-results/navigation/` once per script run so heal re-runs are recorded too.
 
 ## Environment
 
@@ -61,6 +62,17 @@ See `src/clients/coinmarketcap/` as the reference implementation, and `.claude/s
 - Reads required env vars and asserts they're present (`expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()`) before constructing the client, so a missing key fails clearly instead of erroring deep inside an API call.
 - Declares threshold/expected-value constants at the top of the file, named and explicit, rather than inlined into assertions. Exception: `btc-price.spec.ts` reads its min/max bounds from the self-healing window file below instead of hardcoding them, since the bounds are expected to move over time.
 - One `test()` per behavior, asserting on the client's domain type (not the raw response).
+
+### Contract tests (`tests/contract/`)
+
+`src/clients/coinmarketcap/schemas.ts` holds a zod schema per raw response the client parses (plus the shared status/error envelope). The raw types in `types.ts` are `z.infer` of these, so schema and types can't drift. The client doesn't validate at runtime. Schemas list only the fields the client reads, and unknown keys are ignored. Contract specs import `schemas.ts` directly. This is a deliberate test-only exception to the barrel, which still doesn't export raw shapes.
+
+- `provider/` (live, needs `CMC_API_KEY`) GETs each endpoint via Playwright's `request` fixture, bypassing the client, and validates the raw body. A failure means CMC changed the API. Gainers-losers is plan-gated on the Basic key, so only its 403/1006 and 401 envelopes are checked live.
+- `consumer/` (offline) stubs `globalThis.fetch` with a fixture from `fixtures/` and runs the real client. It asserts three things: the request (path, snake_case params, key header), the exact domain mapping, and error-envelope handling. Each fixture is itself schema-checked.
+- Fixtures were recorded live (2026-10-06) and trimmed. `gainers-losers.success.json` is hand-built from CMC's docs. Re-record them when a provider spec flags drift and the schema is updated.
+- Known quirks the schemas encode:
+  - `status.error_code` is a number on quotes/latest and gainers-losers, but a numeric string on simple/price.
+  - quotes/latest returns every coin sharing a symbol, and only the first (canonical) entry is guaranteed a non-null price.
 
 ### E2E test pattern (`tests/e2e/`)
 

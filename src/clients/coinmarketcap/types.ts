@@ -1,3 +1,11 @@
+import type { z } from 'zod'
+import type {
+  CmcApiStatusSchema,
+  GainersLosersResponseSchema,
+  QuoteResponseSchema,
+  SimplePriceResponseSchema,
+} from './schemas'
+
 export interface Price {
   price: number
   currency: string
@@ -9,28 +17,9 @@ export interface CoinMarketCapClientOptions {
   baseUrl?: string
 }
 
-export interface CmcApiStatus {
-  timestamp: string
-  error_code: number
-  error_message: string | null
-  elapsed: number
-  credit_count: number
-}
+export type CmcApiStatus = z.infer<typeof CmcApiStatusSchema>
 
-export interface QuoteResponse {
-  data: Record<
-    string,
-    Array<{
-      quote: {
-        USD: {
-          price: number
-          last_updated: string
-        }
-      }
-    }>
-  >
-  status: CmcApiStatus
-}
+export type QuoteResponse = z.infer<typeof QuoteResponseSchema>
 
 export interface SimplePriceOptions {
   /** Comma-separated CoinMarketCap IDs. At least one of id, slug, or symbol is required. */
@@ -72,23 +61,7 @@ export interface SimplePriceEntry {
   quotes: SimplePriceQuote[]
 }
 
-export interface SimplePriceResponse {
-  data: Array<{
-    id: number
-    name: string
-    symbol: string
-    slug: string
-    quotes: Array<{
-      symbol: string
-      price: number
-      market_cap?: number
-      volume_24h?: number
-      percent_change_24h?: number
-      last_updated?: string
-    }>
-  }>
-  status: CmcApiStatus
-}
+export type SimplePriceResponse = z.infer<typeof SimplePriceResponseSchema>
 
 export type GainersLosersTimePeriod = '1h' | '24h' | '7d' | '30d'
 export type GainersLosersSort = 'percent_change_24h'
@@ -134,22 +107,4 @@ export interface GainersLosersResult {
   creditCount: number
 }
 
-export interface GainersLosersResponse {
-  data: Array<{
-    id: number
-    name: string
-    symbol: string
-    slug: string
-    quote: Record<
-      string,
-      {
-        price: number
-        percent_change_1h: number
-        percent_change_24h: number
-        percent_change_7d: number
-        percent_change_30d: number
-      }
-    >
-  }>
-  status: CmcApiStatus
-}
+export type GainersLosersResponse = z.infer<typeof GainersLosersResponseSchema>

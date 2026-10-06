@@ -77,6 +77,12 @@ Split into three kinds of type:
 
 Never leak the raw response type out of the client module.
 
+Raw response types are not hand-written: each is `z.infer` of a zod schema in
+the client's `schemas.ts`, listing only the fields the client reads. Adding an
+endpoint means adding its schema, plus a provider contract spec (live raw
+response vs schema) and a consumer contract spec (client run against a
+schema-valid fixture with `fetch` stubbed) under `tests/contract/`.
+
 ## Request/Response Logging
 
 Log every request before sending and the raw response after receiving,

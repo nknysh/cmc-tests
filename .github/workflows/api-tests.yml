@@ -39,7 +39,18 @@ jobs:
           path: .agents/coinmarketcap-navigation/models
           key: qwen2.5-coder-7b-instruct-q4_k_m-gguf
 
-      - run: npx playwright test --project=api
+      # Contract tests go first: they check CMC's response shapes and the
+      # client's request/mapping, so a break there explains API failures below.
+      # Both runs write to allure-results/$ALLURE_SUITE and land in one report.
+      - name: Run contract tests
+        run: npx playwright test --project=contract
+        env:
+          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+
+      # Still runs when contracts fail, so the report shows both.
+      - name: Run API tests
+        if: success() || failure()
+        run: npx playwright test --project=api
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
 

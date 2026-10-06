@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "id": 5426,
+      "name": "Solana",
+      "symbol": "SOL",
+      "slug": "solana",
+      "cmc_rank": 5,
+      "quote": {
+        "USD": {
+          "price": 212.4,
+          "percent_change_1h": 1.2,
+          "percent_change_24h": 18.5,
+          "percent_change_7d": 22.1,
+          "percent_change_30d": 30.4,
+          "market_cap": 101000000000,
+          "last_updated": "2026-10-06T11:17:00.000Z"
+        }
+      }
+    },
+    {
+      "id": 52,
+      "name": "XRP",
+      "symbol": "XRP",
+      "slug": "xrp",
+      "cmc_rank": 4,
+      "quote": {
+        "USD": {
+          "price": 2.91,
+          "percent_change_1h": -0.3,
+          "percent_change_24h": -9.7,
+          "percent_change_7d": -4.2,
+          "percent_change_30d": 3.3,
+          "market_cap": 170000000000,
+          "last_updated": "2026-10-06T11:17:00.000Z"
+        }
+      }
+    }
+  ],
+  "status": {
+    "timestamp": "2026-10-06T11:18:42.000Z",
+    "error_code": 0,
+    "error_message": null,
+    "elapsed": 10,
+    "credit_count": 1,
+    "notice": null
+  }
+}

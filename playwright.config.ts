@@ -36,6 +36,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'api', testDir: './tests/api', testIgnore: '**/btc-price.spec.ts' },
+    { name: 'contract', testDir: './tests/contract' },
     { name: 'btc-price', testDir: './tests/api', testMatch: '**/btc-price.spec.ts' },
     { name: 'e2e', testDir: './tests/e2e', use: { ...devices['Desktop Chrome'] } },
   ],

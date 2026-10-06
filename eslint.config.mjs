@@ -18,7 +18,7 @@ export default tseslint.config(
       'playwright/no-networkidle': 'error',
       'playwright/prefer-web-first-assertions': 'error',
       'playwright/no-conditional-in-test': 'error',
-      'playwright/expect-expect': 'error',
+      'playwright/expect-expect': ['error', { assertFunctionNames: ['expectMatchesSchema'] }],
     },
   },
 )
