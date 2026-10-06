@@ -16,10 +16,11 @@ concurrency:
 jobs:
   api:
     runs-on: ubuntu-latest
-    # Selects this suite's own Allure results/report/history (see allurerc.mjs),
-    # so its published report never shows the other suites' results.
+    # Two Allure suites, each with its own results/report/history (see
+    # allurerc.mjs): 'contract' for tests/contract, 'api' for the functional
+    # specs. Each test step selects its suite via ALLURE_SUITE.
     env:
-      ALLURE_SUITE: api
+      ALLURE_SUITES: contract api
     steps:
       - uses: actions/checkout@v7
 
@@ -41,10 +42,10 @@ jobs:
 
       # Contract tests go first: they check CMC's response shapes and the
       # client's request/mapping, so a break there explains API failures below.
-      # Both runs write to allure-results/$ALLURE_SUITE and land in one report.
       - name: Run contract tests
         run: npx playwright test --project=contract
         env:
+          ALLURE_SUITE: contract
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
           # The BTC price-window heal runs once, in the API tests step below.
           SKIP_BTC_PRICE_HEAL: '1'
@@ -54,6 +55,7 @@ jobs:
         if: success() || failure()
         run: npx playwright test --project=api
         env:
+          ALLURE_SUITE: api
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
 
       # Per-suite Allure history lives on gh-pages so each run's results accumulate.
@@ -65,14 +67,26 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
-      - name: Generate Allure report
+      - name: Generate Allure reports
         if: always()
         run: |
           mkdir -p allure-history
-          cp "gh-pages/allure-history/$ALLURE_SUITE.jsonl" allure-history/ 2>/dev/null || true
-          npx allure generate "allure-results/$ALLURE_SUITE"
+          for suite in $ALLURE_SUITES; do
+            [ -d "allure-results/$suite" ] || continue
+            cp "gh-pages/allure-history/$suite.jsonl" allure-history/ 2>/dev/null || true
+            ALLURE_SUITE=$suite npx allure generate "allure-results/$suite"
+          done
 
-      - name: Upload Allure results
+      - name: Upload Allure results (contract)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-contract
+          path: allure-results/contract/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload Allure results (api)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -81,19 +95,23 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Publish Allure report to gh-pages
+      - name: Publish Allure reports to gh-pages
         if: always()
         run: |
           git fetch origin gh-pages:gh-pages 2>/dev/null || git worktree add --orphan -b gh-pages _pages
           [ -d _pages ] || git worktree add _pages gh-pages
-          rm -rf _pages/api
-          mkdir -p _pages/api _pages/allure-history
-          cp -r "allure-report/$ALLURE_SUITE/." _pages/api/
-          cp "allure-history/$ALLURE_SUITE.jsonl" _pages/allure-history/
+          mkdir -p _pages/allure-history
+          for suite in $ALLURE_SUITES; do
+            [ -d "allure-report/$suite" ] || continue
+            rm -rf "_pages/$suite"
+            mkdir -p "_pages/$suite"
+            cp -r "allure-report/$suite/." "_pages/$suite/"
+            cp "allure-history/$suite.jsonl" _pages/allure-history/
+          done
           # Old history shared by all suites; superseded by allure-history/<suite>.jsonl.
           rm -f _pages/allure-history.jsonl
           cp .github/allure-summary/index.html _pages/index.html
           cd _pages
           git add -A
-          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "Allure report (api)" || exit 0
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "Allure reports (contract, api)" || exit 0
           git push origin gh-pages

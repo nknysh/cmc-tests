@@ -1,7 +1,7 @@
 import process from 'node:process'
 import { defineConfig } from 'allure'
 
-// One report and one history file per suite (btc-price, api, navigation), matching
+// One report and one history file per suite (btc-price, contract, api, navigation), matching
 // the per-suite results dir set in playwright.config.ts.
 const suite = process.env.ALLURE_SUITE || 'adhoc'
 

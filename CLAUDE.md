@@ -13,11 +13,11 @@ Currently the only client is `CoinMarketCapClient`, used to assert on live CoinM
 ## Commands
 
 ```bash
-npm run test:api      # run tests/api except btc-price.spec.ts, plus tests/contract
+npm run test:api      # run tests/api except btc-price.spec.ts (functional API specs)
 npm run test:btc-price # run only btc-price.spec.ts
-npm run test:contract # run tests/contract (test:api also runs it)
+npm run test:contract # run tests/contract (its own Allure suite)
 npm run test:e2e      # run tests/e2e (the navigation suite)
-npm run allure:api     # build allure-report/api/ from allure-results/api/ (also allure:btc-price, allure:navigation)
+npm run allure:api     # build allure-report/api/ from allure-results/api/ (also allure:contract, allure:btc-price, allure:navigation)
 npm run test:allure   # run each suite, then generate its own Allure report even if tests failed
 npx playwright test tests/api/simple-price.spec.ts   # run a single file
 npx playwright test -g "BTC price is within expected range"  # run a single test by title
@@ -35,7 +35,7 @@ After lint, the hook also runs `PreCommitCodeReviewHook` (`.agents/code-review-h
 
 ## Allure reporting
 
-Each suite is fully isolated by the `ALLURE_SUITE` env var (`btc-price`, `api` = simple price + gainers-losers, `navigation`; unset → `adhoc`): `playwright.config.ts` writes results to `allure-results/<suite>/`, and `allurerc.mjs` (Allure 3, `appendHistory`) generates `allure-report/<suite>/` and appends to `allure-history/<suite>.jsonl`. The `test:api`/`test:btc-price`/`test:e2e` scripts set the key and clear that suite's results dir before running. Results, reports and history are gitignored locally. In CI, each of the two heal workflows and `api-tests.yml` sets `ALLURE_SUITE` at job level, restores its own `allure-history/<suite>.jsonl` from the `gh-pages` branch, generate the report, and publish it back to `gh-pages` under `btc-price/`, `navigation/` or `api/` (the `api-tests.yml` workflow runs `--project=contract` then `--project=api` as separate steps, i.e. the contract tests followed by the simple-price and gainers-losers specs, every 6 hours plus `workflow_dispatch`) and a summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links all three and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script sets `ALLURE_SUITE=navigation` and `PLAYWRIGHT_JSON_OUTPUT_NAME` (which makes the config add the `json` reporter), clearing `allure-results/navigation/` once per script run so heal re-runs are recorded too.
+Each suite is fully isolated by the `ALLURE_SUITE` env var (`btc-price`, `api` = functional simple price + gainers-losers specs, `contract` = `tests/contract`, `navigation`; unset → `adhoc`): `playwright.config.ts` writes results to `allure-results/<suite>/`, and `allurerc.mjs` (Allure 3, `appendHistory`) generates `allure-report/<suite>/` and appends to `allure-history/<suite>.jsonl`. The `test:api`/`test:contract`/`test:btc-price`/`test:e2e` scripts set the key and clear that suite's results dir before running. Results, reports and history are gitignored locally. In CI, each of the two heal workflows sets `ALLURE_SUITE` at job level, restores its own `allure-history/<suite>.jsonl` from the `gh-pages` branch, generates the report, and publishes it back to `gh-pages` under `btc-price/` or `navigation/`. `api-tests.yml` (every 6 hours plus `workflow_dispatch`) runs `--project=contract` then `--project=api` as separate steps, each setting its own `ALLURE_SUITE` (`contract`, `api`), then generates and publishes both reports in a loop over `ALLURE_SUITES` to `contract/` and `api/`. A summary landing page (`.github/allure-summary/index.html`, copied to the branch root) links all four and shows each one's latest `summary.json` stats. GitHub Pages serves the `gh-pages` branch at https://nknysh.github.io/cmc-tests/ (the repo is public, so reports are too). The navigation heal script sets `ALLURE_SUITE=navigation` and `PLAYWRIGHT_JSON_OUTPUT_NAME` (which makes the config add the `json` reporter), clearing `allure-results/navigation/` once per script run so heal re-runs are recorded too.
 
 ## Environment
 
