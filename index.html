@@ -26,14 +26,15 @@
 <body>
 <main>
   <h1>CMC Tests Summary</h1>
-  <p class="sub">Latest Allure result of each scheduled workflow. Open a report for full history and trends.</p>
+  <p class="sub">Latest Allure result of each suite. Open a report for full history and trends.</p>
   <div class="grid" id="grid"></div>
 </main>
 <script>
 const reports = [
   { title: 'BTC price window', path: 'btc-price/' },
   { title: 'Navigation e2e', path: 'navigation/' },
-  { title: 'API (simple-price)', path: 'api/' },
+  { title: 'API functional', path: 'api/' },
+  { title: 'API contract', path: 'contract/' },
 ];
 const grid = document.getElementById('grid');
 
