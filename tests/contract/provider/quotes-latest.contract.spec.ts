@@ -15,31 +15,29 @@ const QUOTES_LATEST_PATH = '/v2/cryptocurrency/quotes/latest'
 const SYMBOL_BTC = 'BTC'
 const CURRENCY_USD = 'USD'
 
-test.describe('CoinMarketCap contract (provider)', () => {
-  test.describe('Quotes Latest — GET /v2/cryptocurrency/quotes/latest', () => {
-    test('a successful response matches the client contract', async ({ request }) => {
-      const apiKey = requireEnv('CMC_API_KEY')
+test.describe('Quotes Latest provider contract — GET /v2/cryptocurrency/quotes/latest', () => {
+  test('a successful response matches the client contract', async ({ request }) => {
+    const apiKey = requireEnv('CMC_API_KEY')
 
-      const { status, body } = await cmcRawGet(request, QUOTES_LATEST_PATH, {
-        apiKey,
-        params: { symbol: SYMBOL_BTC, convert: CURRENCY_USD },
-      })
-
-      expect(status).toBe(200)
-      const parsed = expectMatchesSchema(body, QuoteResponseSchema)
-      // The schema covers every key's shape; the client also needs the requested symbol to be one of them.
-      expect(parsed.data[SYMBOL_BTC]).toBeDefined()
+    const { status, body } = await cmcRawGet(request, QUOTES_LATEST_PATH, {
+      apiKey,
+      params: { symbol: SYMBOL_BTC, convert: CURRENCY_USD },
     })
 
-    test('an invalid API key response matches the error contract', async ({ request }) => {
-      const { status, body } = await cmcRawGet(request, QUOTES_LATEST_PATH, {
-        apiKey: INVALID_API_KEY,
-        params: { symbol: SYMBOL_BTC, convert: CURRENCY_USD },
-      })
+    expect(status).toBe(200)
+    const parsed = expectMatchesSchema(body, QuoteResponseSchema)
+    // The schema covers every key's shape; the client also needs the requested symbol to be one of them.
+    expect(parsed.data[SYMBOL_BTC]).toBeDefined()
+  })
 
-      expect(status).toBe(401)
-      const parsed = expectMatchesSchema(body, CmcErrorResponseSchema)
-      expect(Number(parsed.status.error_code)).toBe(ERROR_CODE_INVALID_KEY)
+  test('an invalid API key response matches the error contract', async ({ request }) => {
+    const { status, body } = await cmcRawGet(request, QUOTES_LATEST_PATH, {
+      apiKey: INVALID_API_KEY,
+      params: { symbol: SYMBOL_BTC, convert: CURRENCY_USD },
     })
+
+    expect(status).toBe(401)
+    const parsed = expectMatchesSchema(body, CmcErrorResponseSchema)
+    expect(Number(parsed.status.error_code)).toBe(ERROR_CODE_INVALID_KEY)
   })
 })

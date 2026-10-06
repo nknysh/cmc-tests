@@ -17,55 +17,53 @@ const QUOTES_LATEST_URL = `${CMC_BASE_URL}/v2/cryptocurrency/quotes/latest`
 const SYMBOL_BTC = 'BTC'
 const CURRENCY_USD = 'USD'
 
-test.describe('CoinMarketCap contract (consumer)', () => {
-  test.describe('fetchPrice — GET /v2/cryptocurrency/quotes/latest', () => {
-    let stub: FetchStub | undefined
+test.describe('fetchPrice consumer contract — GET /v2/cryptocurrency/quotes/latest', () => {
+  let stub: FetchStub | undefined
 
-    test.afterEach(() => {
-      stub?.restore()
+  test.afterEach(() => {
+    stub?.restore()
+  })
+
+  test('the success fixture matches the contract', () => {
+    expectMatchesSchema(quotesLatestFixture, QuoteResponseSchema)
+  })
+
+  test('the invalid-key fixture matches the error contract', () => {
+    expectMatchesSchema(invalidKeyFixture, CmcErrorResponseSchema)
+  })
+
+  test('sends the symbol, convert=USD and the API key header', async () => {
+    stub = stubFetch(200, quotesLatestFixture)
+    const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
+
+    await client.fetchPrice(SYMBOL_BTC)
+
+    expect(stub.requests).toHaveLength(1)
+    const [request] = stub.requests
+    const url = new URL(request.url)
+    expect(`${url.origin}${url.pathname}`).toBe(QUOTES_LATEST_URL)
+    expect(Object.fromEntries(url.searchParams)).toEqual({ symbol: SYMBOL_BTC, convert: CURRENCY_USD })
+    expect(request.headers.get(API_KEY_HEADER)).toBe(DUMMY_API_KEY)
+  })
+
+  test('maps the response to a Price', async () => {
+    stub = stubFetch(200, quotesLatestFixture)
+    const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
+
+    const price = await client.fetchPrice(SYMBOL_BTC)
+
+    const { quote } = quotesLatestFixture.data.BTC[0]
+    expect(price).toEqual({
+      price: quote.USD.price,
+      currency: CURRENCY_USD,
+      lastUpdated: quote.USD.last_updated,
     })
+  })
 
-    test('the success fixture matches the contract', () => {
-      expectMatchesSchema(quotesLatestFixture, QuoteResponseSchema)
-    })
+  test('surfaces the status and error code from an error envelope', async () => {
+    stub = stubFetch(401, invalidKeyFixture)
+    const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
 
-    test('the invalid-key fixture matches the error contract', () => {
-      expectMatchesSchema(invalidKeyFixture, CmcErrorResponseSchema)
-    })
-
-    test('sends the symbol, convert=USD and the API key header', async () => {
-      stub = stubFetch(200, quotesLatestFixture)
-      const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
-
-      await client.fetchPrice(SYMBOL_BTC)
-
-      expect(stub.requests).toHaveLength(1)
-      const [request] = stub.requests
-      const url = new URL(request.url)
-      expect(`${url.origin}${url.pathname}`).toBe(QUOTES_LATEST_URL)
-      expect(Object.fromEntries(url.searchParams)).toEqual({ symbol: SYMBOL_BTC, convert: CURRENCY_USD })
-      expect(request.headers.get(API_KEY_HEADER)).toBe(DUMMY_API_KEY)
-    })
-
-    test('maps the response to a Price', async () => {
-      stub = stubFetch(200, quotesLatestFixture)
-      const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
-
-      const price = await client.fetchPrice(SYMBOL_BTC)
-
-      const { quote } = quotesLatestFixture.data.BTC[0]
-      expect(price).toEqual({
-        price: quote.USD.price,
-        currency: CURRENCY_USD,
-        lastUpdated: quote.USD.last_updated,
-      })
-    })
-
-    test('surfaces the status and error code from an error envelope', async () => {
-      stub = stubFetch(401, invalidKeyFixture)
-      const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
-
-      await expect(client.fetchPrice(SYMBOL_BTC)).rejects.toThrow(/401.*error_code 1001: This API Key is invalid/)
-    })
+    await expect(client.fetchPrice(SYMBOL_BTC)).rejects.toThrow(/401.*error_code 1001: This API Key is invalid/)
   })
 })
