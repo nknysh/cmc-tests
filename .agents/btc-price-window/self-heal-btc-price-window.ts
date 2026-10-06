@@ -27,6 +27,13 @@ function commitHealedWindow(): void {
 }
 
 export default async function globalSetup(): Promise<void> {
+  // Set by runs that don't use the window (the contract suite), so they make no
+  // live price call and can't produce a heal commit.
+  if (process.env.SKIP_BTC_PRICE_HEAL) {
+    console.log('[self-heal-btc-price-window] SKIP_BTC_PRICE_HEAL set, skipping self-heal')
+    return
+  }
+
   const apiKey = process.env.CMC_API_KEY
   if (!apiKey) {
     console.warn('[self-heal-btc-price-window] CMC_API_KEY not set, skipping self-heal')

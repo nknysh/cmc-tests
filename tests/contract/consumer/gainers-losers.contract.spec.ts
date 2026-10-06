@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { CmcErrorResponseSchema, GainersLosersResponseSchema } from '@src/clients/coinmarketcap/schemas'
+import { API_KEY_HEADER, CMC_BASE_URL, DUMMY_API_KEY } from '../helpers/constants'
 import { expectMatchesSchema } from '../helpers/expectMatchesSchema'
 import { stubFetch, type FetchStub } from '../helpers/stubFetch'
 import successFixture from '../fixtures/gainers-losers.success.json'
@@ -14,9 +15,7 @@ import planGatedFixture from '../fixtures/error.plan-gated-1006.json'
  * docs, since CMC_API_KEY's Basic plan can't record a live one.
  */
 
-const DUMMY_API_KEY = 'contract-test-key'
-const API_KEY_HEADER = 'X-CMC_PRO_API_KEY'
-const GAINERS_LOSERS_URL = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/trending/gainers-losers'
+const GAINERS_LOSERS_URL = `${CMC_BASE_URL}/v1/cryptocurrency/trending/gainers-losers`
 const START = 1
 const LIMIT = 2
 const CURRENCY_USD = 'USD'

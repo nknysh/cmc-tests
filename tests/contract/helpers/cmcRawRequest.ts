@@ -1,7 +1,5 @@
 import type { APIRequestContext } from '@playwright/test'
-
-const CMC_BASE_URL = 'https://pro-api.coinmarketcap.com'
-const API_KEY_HEADER = 'X-CMC_PRO_API_KEY'
+import { API_KEY_HEADER, CMC_BASE_URL } from './constants'
 
 export interface CmcRawResponse {
   status: number

@@ -46,6 +46,8 @@ jobs:
         run: npx playwright test --project=contract
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+          # The BTC price-window heal runs once, in the API tests step below.
+          SKIP_BTC_PRICE_HEAL: '1'
 
       # Still runs when contracts fail, so the report shows both.
       - name: Run API tests

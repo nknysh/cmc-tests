@@ -69,6 +69,7 @@ See `src/clients/coinmarketcap/` as the reference implementation, and `.claude/s
 
 - `provider/` (live, needs `CMC_API_KEY`) GETs each endpoint via Playwright's `request` fixture, bypassing the client, and validates the raw body. A failure means CMC changed the API. Gainers-losers is plan-gated on the Basic key, so only its 403/1006 and 401 envelopes are checked live.
 - `consumer/` (offline) stubs `globalThis.fetch` with a fixture from `fixtures/` and runs the real client. It asserts three things: the request (path, snake_case params, key header), the exact domain mapping, and error-envelope handling. Each fixture is itself schema-checked.
+- Shared values (base URL, key header, dummy/invalid keys, error code 1001) live in `helpers/constants.ts`; provider specs read the key via `requireEnv('CMC_API_KEY')`.
 - Fixtures were recorded live (2026-10-06) and trimmed. `gainers-losers.success.json` is hand-built from CMC's docs. Re-record them when a provider spec flags drift and the schema is updated.
 - Known quirks the schemas encode:
   - `status.error_code` is a number on quotes/latest and gainers-losers, but a numeric string on simple/price.
@@ -80,7 +81,7 @@ Standard Playwright Page Object Model conventions apply; see the `e2e-testing` s
 
 ### Playwright config
 
-`globalSetup` runs the self-healing BTC price window (below) before every test session, regardless of which `--project` is selected. The `btc-price` project is split out from `api` so the heal workflow can run it in isolation.
+`globalSetup` runs the self-healing BTC price window (below) before every test session, regardless of which `--project` is selected, unless `SKIP_BTC_PRICE_HEAL` is set (as `test:contract` and the CI contract step do, keeping consumer contract runs offline). The `btc-price` project is split out from `api` so the heal workflow can run it in isolation.
 
 ### Self-healing BTC price window (`.agents/btc-price-window/`)
 

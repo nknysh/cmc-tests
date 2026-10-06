@@ -5,7 +5,9 @@ import {
   SimplePriceResponseSchema,
 } from '@src/clients/coinmarketcap/schemas'
 import { cmcRawGet } from '../helpers/cmcRawRequest'
+import { ERROR_CODE_INVALID_KEY, INVALID_API_KEY } from '../helpers/constants'
 import { expectMatchesSchema } from '../helpers/expectMatchesSchema'
+import { requireEnv } from '../helpers/requireEnv'
 
 /**
  * Provider contract for GET /v2/simple/price: the live raw response must
@@ -14,21 +16,17 @@ import { expectMatchesSchema } from '../helpers/expectMatchesSchema'
  * CoinMarketCap changed the API, not that the client broke.
  */
 
-const apiKey = process.env.CMC_API_KEY
-
 const SIMPLE_PRICE_PATH = '/v2/simple/price'
 const CMC_ID_BTC = '1'
 const CURRENCY_USD = 'USD'
-const INVALID_API_KEY = 'not-a-real-key'
-const ERROR_CODE_INVALID_KEY = 1001
 
 test.describe('CoinMarketCap contract (provider)', () => {
   test.describe('Simple Price — GET /v2/simple/price', () => {
     test('a response without include flags matches the client contract', async ({ request }) => {
-      expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
+      const apiKey = requireEnv('CMC_API_KEY')
 
       const { status, body } = await cmcRawGet(request, SIMPLE_PRICE_PATH, {
-        apiKey: apiKey!,
+        apiKey,
         params: { id: CMC_ID_BTC, convert: CURRENCY_USD },
       })
 
@@ -38,10 +36,10 @@ test.describe('CoinMarketCap contract (provider)', () => {
     })
 
     test('an include_all response carries every optional quote field', async ({ request }) => {
-      expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
+      const apiKey = requireEnv('CMC_API_KEY')
 
       const { status, body } = await cmcRawGet(request, SIMPLE_PRICE_PATH, {
-        apiKey: apiKey!,
+        apiKey,
         params: { id: CMC_ID_BTC, convert: CURRENCY_USD, include_all: 'true' },
       })
 

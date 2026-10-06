@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { CmcErrorResponseSchema, QuoteResponseSchema } from '@src/clients/coinmarketcap/schemas'
+import { API_KEY_HEADER, CMC_BASE_URL, DUMMY_API_KEY } from '../helpers/constants'
 import { expectMatchesSchema } from '../helpers/expectMatchesSchema'
 import { stubFetch, type FetchStub } from '../helpers/stubFetch'
 import quotesLatestFixture from '../fixtures/quotes-latest.btc.json'
@@ -12,9 +13,7 @@ import invalidKeyFixture from '../fixtures/error.invalid-key-1001.json'
  * request it sends and how it maps the response. No network, no API key.
  */
 
-const DUMMY_API_KEY = 'contract-test-key'
-const API_KEY_HEADER = 'X-CMC_PRO_API_KEY'
-const QUOTES_LATEST_URL = 'https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest'
+const QUOTES_LATEST_URL = `${CMC_BASE_URL}/v2/cryptocurrency/quotes/latest`
 const SYMBOL_BTC = 'BTC'
 const CURRENCY_USD = 'USD'
 

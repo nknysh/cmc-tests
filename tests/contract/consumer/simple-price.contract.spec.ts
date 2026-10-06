@@ -5,6 +5,7 @@ import {
   SimplePriceQuoteIncludeAllSchema,
   SimplePriceResponseSchema,
 } from '@src/clients/coinmarketcap/schemas'
+import { API_KEY_HEADER, CMC_BASE_URL, DUMMY_API_KEY } from '../helpers/constants'
 import { expectMatchesSchema } from '../helpers/expectMatchesSchema'
 import { stubFetch, type FetchStub } from '../helpers/stubFetch'
 import minimalFixture from '../fixtures/simple-price.btc.minimal.json'
@@ -17,9 +18,7 @@ import invalidKeyFixture from '../fixtures/error.invalid-key-1001.simple-price.j
  * it sends and how it maps the response. No network, no API key.
  */
 
-const DUMMY_API_KEY = 'contract-test-key'
-const API_KEY_HEADER = 'X-CMC_PRO_API_KEY'
-const SIMPLE_PRICE_URL = 'https://pro-api.coinmarketcap.com/v2/simple/price'
+const SIMPLE_PRICE_URL = `${CMC_BASE_URL}/v2/simple/price`
 const CMC_ID_BTC = '1'
 const CURRENCY_ID_USD = '2781'
 const PRECISION = 2
