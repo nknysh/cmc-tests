@@ -24,7 +24,8 @@ to an LLM provider, and no second model download — it reuses the navigation
 heal's existing model cache directory
 (`.agents/coinmarketcap-navigation/models/`, gitignored, cached by
 `actions/cache` under the key `qwen2.5-coder-7b-instruct-q4_k_m-gguf` in both
-heal workflows).
+heal workflows and `api-tests.yml`, whose run triggers the BTC window heal via
+`globalSetup`).
 
 The model is asked for a strict first line (`VERDICT: PASS` or
 `VERDICT: CRITICAL`) plus a short reasoning paragraph. **It fails closed**:

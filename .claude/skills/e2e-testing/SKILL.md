@@ -12,22 +12,12 @@ Comprehensive Playwright patterns for building stable, fast, and maintainable E2
 ## Test File Organization
 
 ```
+playwright.config.ts          # repo root; projects: api, btc-price, e2e
 tests/
-├── e2e/
-│   ├── auth/
-│   │   ├── login.spec.ts
-│   │   ├── logout.spec.ts
-│   │   └── register.spec.ts
-│   ├── features/
-│   │   ├── browse.spec.ts
-│   │   ├── search.spec.ts
-│   │   └── create.spec.ts
-│   └── api/
-│       └── endpoints.spec.ts
-├── fixtures/
-│   ├── auth.ts
-│   └── data.ts
-└── playwright.config.ts
+├── api/                      # API specs (no browser) - see the api-testing skill
+└── e2e/
+    ├── pages/                # page objects, e.g. CoinMarketCapHomePage.ts
+    └── navigation/           # E2E specs, grouped by feature
 ```
 
 ## Page Object Model (POM)
@@ -123,42 +113,26 @@ npx playwright test --grep-invert @flaky
 
 ## Playwright Configuration
 
-```typescript
-import { defineConfig, devices } from '@playwright/test'
+This repo's config is [playwright.config.ts](../../../playwright.config.ts) at the
+repo root: one config, three projects (`api`, `btc-price`, `e2e`), with only
+`e2e` launching a browser (Desktop Chrome). There is no `webServer`; E2E specs
+hit the live CoinMarketCap site. Shared defaults already set under `use`:
 
-export default defineConfig({
-  testDir: './tests/e2e',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['junit', { outputFile: 'playwright-results.xml' }],
-    ['json', { outputFile: 'playwright-results.json' }]
-  ],
-  use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    actionTimeout: 10000,
-    navigationTimeout: 30000,
-  },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } },
-  ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
-})
+```typescript
+use: {
+  baseURL: process.env.BASE_URL || 'http://localhost:3000',
+  trace: 'on-first-retry',
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+  actionTimeout: 10000,
+  navigationTimeout: 30000,
+},
 ```
+
+Reporters are `html`, `list` and `allure-playwright` (results under
+`allure-results/<ALLURE_SUITE>/`), plus `json` when
+`PLAYWRIGHT_JSON_OUTPUT_NAME` is set. Add a new browser suite as another
+project rather than a second config file.
 
 ## Flaky Test Patterns
 
@@ -228,25 +202,27 @@ await page.locator('[data-testid="chart"]').screenshot({ path: 'artifacts/chart.
 
 ### Traces
 
+The config records a trace on the first retry (`trace: 'on-first-retry'`).
+To capture one manually inside a test:
+
 ```typescript
-await browser.startTracing(page, {
-  path: 'artifacts/trace.json',
-  screenshots: true,
-  snapshots: true,
-})
+await context.tracing.start({ screenshots: true, snapshots: true })
 // ... test actions ...
-await browser.stopTracing()
+await context.tracing.stop({ path: 'artifacts/trace.zip' })
 ```
+
+Open it with `npx playwright show-trace artifacts/trace.zip`.
 
 ### Video
 
 ```typescript
-// In playwright.config.ts
+// In playwright.config.ts (already set in this repo)
 use: {
-  video: 'retain-on-failure',
-  videosPath: 'artifacts/videos/'
+  video: 'retain-on-failure', // or { mode: 'retain-on-failure', size: { width: 1280, height: 720 } }
 }
 ```
+
+Videos are written per test under the `outputDir` (default `test-results/`).
 
 ## CI/CD Integration
 
@@ -299,8 +275,8 @@ jobs:
 ## Artifacts
 - HTML Report: playwright-report/index.html
 - Screenshots: artifacts/*.png
-- Videos: artifacts/videos/*.webm
-- Traces: artifacts/*.zip
+- Videos: test-results/**/*.webm
+- Traces: test-results/**/trace.zip
 ```
 
 ## Wallet / Web3 Testing

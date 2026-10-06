@@ -30,7 +30,7 @@ src/clients/coinmarketcap/
 
 ```typescript
 export { CoinMarketCapClient } from './CoinMarketCapClient'
-export type { BtcPrice, BtcQuoteResponse, CoinMarketCapClientOptions } from './types'
+export type { CoinMarketCapClientOptions, Price } from './types'
 ```
 
 ## Client Class Shape
@@ -40,7 +40,7 @@ export type { BtcPrice, BtcQuoteResponse, CoinMarketCapClientOptions } from './t
 - Validate required config (e.g. `apiKey`) in the constructor and throw
   immediately rather than failing later inside a method.
 - Store config as `private readonly` fields.
-- One public async method per logical operation (e.g. `fetchBtcPrice`),
+- One public async method per logical operation (e.g. `fetchPrice`),
   returning a small domain type — not the raw API response shape.
 
 ```typescript
@@ -70,7 +70,7 @@ export class SomeApiClient {
 Split into three kinds of type:
 
 1. **Domain type** returned to callers — camelCase, only the fields callers
-   need (e.g. `BtcPrice { price, currency, lastUpdated }`).
+   need (e.g. `Price { price, currency, lastUpdated }`).
 2. **Client options** — the constructor's input shape.
 3. **Raw response type** — mirrors the third-party API's actual JSON
    (snake_case fields preserved), used only internally to type `response.json()`.
@@ -152,6 +152,7 @@ import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { readBtcPriceWindow } from '@agents/btc-price-window/btcPriceWindow'
 
 const apiKey = process.env.CMC_API_KEY
+const SYMBOL_BTC = 'BTC'
 const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
 
 test.describe('CoinMarketCap BTC Price', () => {
@@ -159,7 +160,7 @@ test.describe('CoinMarketCap BTC Price', () => {
     expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
 
     const client = new CoinMarketCapClient({ apiKey: apiKey! })
-    const btc = await client.fetchBtcPrice()
+    const btc = await client.fetchPrice(SYMBOL_BTC)
 
     expect(btc.price).toBeGreaterThan(BTC_PRICE_MIN)
     expect(btc.price).toBeLessThan(BTC_PRICE_MAX)
@@ -167,7 +168,7 @@ test.describe('CoinMarketCap BTC Price', () => {
 })
 ```
 
-Run just the API suite with `npm run test:api`.
+Run the API suites with `npm run test:api` (everything except the BTC price window spec) and `npm run test:btc-price`.
 
 ## Parameterized Testing
 
@@ -231,13 +232,19 @@ hardcode a static threshold — it goes stale and forces manual updates. Instead
 - Add a Playwright `globalSetup` agent under `.agents/<name>/` (wired via
   `globalSetup` in [playwright.config.ts](../../../playwright.config.ts)) that
   fetches the live value before tests run and, if it falls outside the
-  persisted window, recenters the window around it — keeping `max - min`
-  constant — and rewrites the JSON.
-- After rewriting, the agent commits just that JSON file (`git add` +
-  `git commit`, no push) so the healed window is captured automatically. It
-  uses the caller's own git identity locally; in CI (`process.env.CI`) it
-  scopes a `github-actions[bot]` identity to that one commit via `git -c`
-  instead of mutating global/local git config.
+  persisted window, computes a recentred window around it — keeping
+  `max - min` constant.
+- Before writing anything, the agent passes the old window, the live value,
+  and the proposed window to the shared local-model auditor
+  (`.agents/self-heal-commit-auditor/auditChange.mts`). The agent commits with
+  `--no-verify`, so this audit is the only check on the change. On a
+  `CRITICAL` verdict it leaves the window untouched and sets a non-zero exit
+  code, so a genuinely anomalous value surfaces as a failure instead of being
+  absorbed.
+- On `PASS` it rewrites the JSON and commits just that file (`git add` +
+  `git commit --no-verify`, no push). It uses the caller's own git identity
+  locally; in CI (`process.env.CI`) it scopes the repo owner's identity to
+  that one commit via `git -c` instead of mutating global/local git config.
 - The spec reads the window via the helper instead of hardcoding bounds, so
   it stays green as the underlying value drifts while still catching
   genuinely anomalous readings (outside the fixed-width window).

@@ -15,10 +15,11 @@ Currently the only client is `CoinMarketCapClient`, used to assert on live CoinM
 ```bash
 npm run test:api      # run tests/api except btc-price.spec.ts
 npm run test:btc-price # run only btc-price.spec.ts
+npm run test:e2e      # run tests/e2e (the navigation suite)
 npm run allure:api     # build allure-report/api/ from allure-results/api/ (also allure:btc-price, allure:navigation)
 npm run test:allure   # run each suite, then generate its own Allure report even if tests failed
 npx playwright test tests/api/simple-price.spec.ts   # run a single file
-npx playwright test -g "BTC price is above threshold"  # run a single test by title
+npx playwright test -g "BTC price is within expected range"  # run a single test by title
 npx tsc --noEmit      # type-check without emitting
 npm run lint          # ESLint (typescript-eslint + eslint-plugin-playwright)
 npm run lint:fix      # same, with autofix
@@ -87,8 +88,10 @@ Do not add a `Co-Authored-By: Claude` trailer to commit messages — commits sho
 
 ## Skills
 
-This repo has local skills wired up via `skills-lock.json` and symlinked into `.claude/skills/`:
-- `api-testing` (local, `skills/api-testing/SKILL.md`) — client/API-test conventions described above.
-- `e2e-testing` (from `affaan-m/ECC` on GitHub) — Playwright E2E patterns.
+Skills live in `.claude/skills/` (sources tracked in `skills-lock.json`):
+- `api-testing` (local, `.claude/skills/api-testing/SKILL.md`) — client/API-test conventions described above.
+- `test-design` (local, `.claude/skills/test-design/SKILL.md`) — what to test and how to structure specs.
+- `e2e-testing` (from `affaan-m/ECC` on GitHub, locally modified) — Playwright E2E patterns.
+- `typescript-code-review` (from `anyproto/anytype-ts`, locally modified; symlinked from `.agents/skills/typescript-code-review/`) — used by the pre-commit review hook.
 
 A `playwright` MCP server (`@playwright/mcp`) is configured in `.mcp.json` for browser automation from Claude Code itself.
