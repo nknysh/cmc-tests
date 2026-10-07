@@ -49,7 +49,12 @@ async function render({ title, path }) {
     if (!res.ok) throw new Error(res.status);
     const s = await res.json();
     const st = s.stats || {};
-    const cls = s.status === 'passed' ? 'passed' : s.status === 'failed' ? 'failed' : 'other';
+    let cls = 'other';
+    if (s.status === 'passed') {
+      cls = 'passed';
+    } else if (s.status === 'failed') {
+      cls = 'failed';
+    }
     const rest = (k) => st[k] ?? 0;
     card.innerHTML = `
       <h2>${title}<span class="badge ${cls}">${s.status ?? 'unknown'}</span></h2>

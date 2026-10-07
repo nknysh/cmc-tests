@@ -156,22 +156,25 @@ function openAncestors(node) {
 async function route() {
   const hash = location.hash
   try {
-    let m
-    if ((m = /^#case\/(\d+)$/.exec(hash))) {
-      const tc = await api(`/api/test-cases/${m[1]}`)
+    const caseMatch = /^#case\/(\d+)$/.exec(hash)
+    if (caseMatch) {
+      const tc = await api(`/api/test-cases/${caseMatch[1]}`)
       renderCase(tc)
       if (tc.suiteId !== null) {
         const suite = treeEl.querySelector(`details[data-suite-id="${tc.suiteId}"]`)
         if (suite) { openAncestors(suite); suite.open = true; await suite.populate() }
       }
-    } else if ((m = /^#suite\/(\d+)$/.exec(hash))) {
-      const suite = treeEl.querySelector(`details[data-suite-id="${m[1]}"]`)
-      const name = suite?.querySelector('summary').firstChild.textContent ?? `#${m[1]} Suite`
-      renderList(name, await api(`/api/suites/${m[1]}/test-cases`))
-    } else if (hash === '#unsorted') {
-      renderList('Unsorted', await api('/api/test-cases/unsorted'))
     } else {
-      detailEl.replaceChildren(el('p', { className: 'muted', textContent: 'Select a suite or test case.' }))
+      const suiteMatch = /^#suite\/(\d+)$/.exec(hash)
+      if (suiteMatch) {
+        const suite = treeEl.querySelector(`details[data-suite-id="${suiteMatch[1]}"]`)
+        const name = suite?.querySelector('summary').firstChild.textContent ?? `#${suiteMatch[1]} Suite`
+        renderList(name, await api(`/api/suites/${suiteMatch[1]}/test-cases`))
+      } else if (hash === '#unsorted') {
+        renderList('Unsorted', await api('/api/test-cases/unsorted'))
+      } else {
+        detailEl.replaceChildren(el('p', { className: 'muted', textContent: 'Select a suite or test case.' }))
+      }
     }
   } catch (err) {
     detailEl.replaceChildren(el('p', { textContent: String(err) }))
