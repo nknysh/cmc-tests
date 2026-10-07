@@ -24,11 +24,11 @@ jobs:
         with:
           node-version: 24
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       # Report only; lint findings surface through Sonar's quality gate.
       - name: ESLint report
-        run: npx eslint tests -f json -o eslint-report.json || true
+        run: npx --no-install eslint tests -f json -o eslint-report.json || true
 
       # Static analysis only (see sonar-project.properties) - no tests run, so
       # no CMC_API_KEY. sonar.qualitygate.wait makes this step fail on a red gate.

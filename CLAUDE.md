@@ -33,6 +33,13 @@ After lint, the hook also runs `PreCommitCodeReviewHook` (`.agents/code-review-h
 
 `typescript` is aliased to `@typescript/typescript6` because typescript-eslint doesn't support TS 7 yet (`typescript7` is kept alongside). Drop the alias once typescript-eslint supports TS >=7.1.
 
+## No new lint or Sonar issues
+
+Any code or config you write must not add ESLint errors/warnings or SonarQube Cloud issues/hotspots. Before calling a change done:
+- Run `npm run lint` and `npx tsc --noEmit` and fix what you introduced (don't silence rules with `eslint-disable` unless the user agrees).
+- Follow Sonar's rules up front rather than fixing after the scan. Known ones for this repo's workflows: `npm ci --ignore-scripts` (S6505), invoke repo tools via `./node_modules/.bin/<tool>` or `npx --no-install`, never install packages outside the lockfile, and pin third-party actions to a commit SHA with a `# vX.Y.Z` comment.
+- If a new issue is unavoidable, say so and explain why instead of shipping it silently.
+
 ## SonarQube Cloud
 
 `.github/workflows/sonar.yml` runs SonarQube Cloud static analysis on every push to `main`, on every PR, and on `workflow_dispatch`. It uses the `SONAR_TOKEN` secret and runs no tests. `sonar-project.properties` declares `tests/**` as *sources*, not `sonar.tests`, so specs get the full rule set rather than Sonar's reduced test-file rules. It excludes `tests/contract/fixtures/**` and imports an ESLint JSON report (`eslint-report.json`, gitignored) as external issues. `sonar.qualitygate.wait=true` makes the scan step, and so the check, fail when the project's quality gate fails. The gate is a custom one configured in the SonarQube Cloud UI with no coverage condition, since specs have no coverage. Automatic Analysis must stay off in the project settings, because it conflicts with CI analysis.
