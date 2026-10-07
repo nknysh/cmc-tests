@@ -17,6 +17,7 @@
     "allure:contract": "ALLURE_SUITE=contract npm run allure:generate",
     "allure:btc-price": "ALLURE_SUITE=btc-price npm run allure:generate",
     "allure:navigation": "ALLURE_SUITE=navigation npm run allure:generate",
+    "allure:gate": "allure quality-gate allure-results/${ALLURE_SUITE:-adhoc}",
     "allure:open": "allure open allure-report/${ALLURE_SUITE:-adhoc}",
     "test:allure": "npm run test:btc-price; npm run allure:btc-price; npm run test:contract; npm run allure:contract; npm run test:api; npm run allure:api; npm run test:e2e; npm run allure:navigation",
     "lint": "eslint .",

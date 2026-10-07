@@ -40,10 +40,29 @@ jobs:
           path: .agents/coinmarketcap-navigation/models
           key: qwen2.5-coder-7b-instruct-q4_k_m-gguf
 
+      # Per-suite Allure history lives on gh-pages so each run's results accumulate.
+      # Restored before the tests: `allure run` builds the report (and appends
+      # history) as soon as they finish.
+      - name: Restore Allure history
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Copy Allure history
+        run: |
+          mkdir -p allure-history
+          for suite in $ALLURE_SUITES; do
+            cp "gh-pages/allure-history/$suite.jsonl" allure-history/ 2>/dev/null || true
+          done
+
+      # Each suite runs under `allure run`, which builds its report with that
+      # suite's quality gate (allurerc.mjs) and exits non-zero if the gate fails.
       # Contract tests go first: they check CMC's response shapes and the
       # client's request/mapping, so a break there explains API failures below.
       - name: Run contract tests
-        run: ./node_modules/.bin/playwright test --project=contract
+        run: ./node_modules/.bin/allure run -- ./node_modules/.bin/playwright test --project=contract
         env:
           ALLURE_SUITE: contract
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
@@ -53,29 +72,10 @@ jobs:
       # Still runs when contracts fail, so the report shows both.
       - name: Run API tests
         if: success() || failure()
-        run: ./node_modules/.bin/playwright test --project=api
+        run: ./node_modules/.bin/allure run -- ./node_modules/.bin/playwright test --project=api
         env:
           ALLURE_SUITE: api
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
-
-      # Per-suite Allure history lives on gh-pages so each run's results accumulate.
-      - name: Restore Allure history
-        if: always()
-        continue-on-error: true
-        uses: actions/checkout@v7
-        with:
-          ref: gh-pages
-          path: gh-pages
-
-      - name: Generate Allure reports
-        if: always()
-        run: |
-          mkdir -p allure-history
-          for suite in $ALLURE_SUITES; do
-            [ -d "allure-results/$suite" ] || continue
-            cp "gh-pages/allure-history/$suite.jsonl" allure-history/ 2>/dev/null || true
-            ALLURE_SUITE=$suite ./node_modules/.bin/allure generate "allure-results/$suite"
-          done
 
       - name: Upload Allure results (contract)
         if: always()

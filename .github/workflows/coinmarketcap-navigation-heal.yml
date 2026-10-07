@@ -37,7 +37,32 @@ jobs:
           path: .agents/coinmarketcap-navigation/models
           key: qwen2.5-coder-7b-instruct-q4_k_m-gguf
 
-      - run: node .agents/coinmarketcap-navigation/self-heal-navigation-locators.mts
+      # Per-suite Allure history lives on gh-pages so each run's results accumulate.
+      # Restored before the tests: `allure run` builds the report (and appends
+      # history) as soon as they finish.
+      - name: Restore Allure history
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      # `allure run` builds the report with this suite's quality gate (allurerc.mjs),
+      # and its exit code is the gate's. The heal script can also fail with no
+      # failing test (e.g. the auditor vetoes a patch that passes), so its own
+      # exit code is kept too and the step fails if either one is non-zero.
+      - name: Run navigation self-heal
+        run: |
+          mkdir -p allure-history
+          cp "gh-pages/allure-history/$ALLURE_SUITE.jsonl" allure-history/ 2>/dev/null || true
+          heal_exit="$RUNNER_TEMP/heal-exit-code"
+          gate=0
+          HEAL_EXIT="$heal_exit" ./node_modules/.bin/allure run -- sh -c \
+            'node .agents/coinmarketcap-navigation/self-heal-navigation-locators.mts; code=$?; echo "$code" > "$HEAL_EXIT"; exit "$code"' \
+            || gate=$?
+          heal=$(cat "$heal_exit" 2>/dev/null || echo 1)
+          echo "quality gate exit: $gate, heal script exit: $heal"
+          [ "$gate" -eq 0 ] && [ "$heal" -eq 0 ]
         env:
           BASE_URL: https://coinmarketcap.com
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
@@ -54,22 +79,6 @@ jobs:
             test-results/
           if-no-files-found: ignore
           retention-days: 7
-
-      # Per-suite Allure history lives on gh-pages so each run's results accumulate.
-      - name: Restore Allure history
-        if: always()
-        continue-on-error: true
-        uses: actions/checkout@v7
-        with:
-          ref: gh-pages
-          path: gh-pages
-
-      - name: Generate Allure report
-        if: always()
-        run: |
-          mkdir -p allure-history
-          cp "gh-pages/allure-history/$ALLURE_SUITE.jsonl" allure-history/ 2>/dev/null || true
-          ./node_modules/.bin/allure generate "allure-results/$ALLURE_SUITE"
 
       - name: Upload Allure results
         if: always()
