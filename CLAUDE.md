@@ -17,6 +17,7 @@ npm run test:api      # run tests/api except btc-price.spec.ts (functional API s
 npm run test:btc-price # run only btc-price.spec.ts
 npm run test:contract # run tests/contract (its own Allure suite)
 npm run test:e2e      # run tests/e2e (the navigation suite)
+npm run test:perf     # k6 latency baseline (needs the k6 binary and CMC_API_KEY exported)
 npm run allure:api     # build allure-report/api/ from allure-results/api/ (also allure:contract, allure:btc-price, allure:navigation)
 npm run allure:gate   # check allure-results/$ALLURE_SUITE against that suite's quality gate (e.g. ALLURE_SUITE=api npm run allure:gate)
 npm run test:allure   # run each suite, then generate its own Allure report even if tests failed
@@ -88,6 +89,10 @@ See `src/clients/coinmarketcap/` as the reference implementation, and `.claude/s
 - Known quirks the schemas encode:
   - `status.error_code` is a number on quotes/latest and gainers-losers, but a numeric string on simple/price.
   - quotes/latest returns every coin sharing a symbol, and only the first (canonical) entry is guaranteed a non-null price.
+
+### Performance baseline (`tests/perf/`)
+
+`cmc-latency.k6.ts` is a [k6](https://grafana.com/docs/k6/) script, not a Playwright spec. The `.k6.ts` suffix keeps Playwright from collecting it. It measures latency and error rate on simple/price and quotes/latest. It doesn't load-test: the Basic key is capped at 30 req/min, so it sends 10 req/min per endpoint for 3 minutes (60 credits per run). Thresholds are named constants at the top of the file: per-endpoint p95/p99, failed rate, and checks rate. A single HTTP 429 aborts the run. Breaching a threshold makes k6 exit non-zero. k6 bundles the TS itself and imports the base URL and header from `tests/contract/helpers/constants.ts`. `@types/k6` is installed only for `tsc`/ESLint. k6 reads `CMC_API_KEY` from the OS environment, not `.env`, so export it before running locally. `handleSummary` writes `perf-results/summary.{md,json}` (gitignored). `.github/workflows/perf-tests.yml` runs it daily at 03:15 UTC (plus `workflow_dispatch`), offset from api-tests so the two don't share the per-minute cap. It posts the Markdown table as the job summary and uploads `perf-results/` as an artifact.
 
 ### E2E test pattern (`tests/e2e/`)
 

@@ -4,6 +4,7 @@ test-results/
 allure-results/
 allure-report/
 allure-history/
+perf-results/
 .DS_Store
 *.log
 .env

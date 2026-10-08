@@ -9,6 +9,7 @@
     "test:contract": "rm -rf allure-results/contract && ALLURE_SUITE=contract SKIP_BTC_PRICE_HEAL=1 playwright test --project=contract",
     "test:btc-price": "rm -rf allure-results/btc-price && ALLURE_SUITE=btc-price playwright test --project=btc-price",
     "test:e2e": "rm -rf allure-results/navigation && ALLURE_SUITE=navigation playwright test --project=e2e",
+    "test:perf": "mkdir -p perf-results && k6 run tests/perf/cmc-latency.k6.ts",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
+    "@types/k6": "^2.3.0",
     "@types/node": "^24.13.5",
     "allure": "^3.18.0",
     "allure-js-commons": "^3.12.2",

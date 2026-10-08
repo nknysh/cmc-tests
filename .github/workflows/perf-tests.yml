@@ -1,0 +1,39 @@
+name: Performance Tests
+
+on:
+  # Daily, offset from api-tests (:30 every 6h) so the two never share the
+  # Basic key's 30 req/min cap.
+  schedule:
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # k6 bundles the TypeScript script itself, so no npm install is needed.
+      - uses: grafana/setup-k6-action@43b9fc21641a76002687994433dd586f56e791b1 # v1.2.2
+
+      # Exits non-zero (99) when a threshold in the script is breached.
+      - name: Run latency baseline
+        run: mkdir -p perf-results && k6 run tests/perf/cmc-latency.k6.ts
+        env:
+          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+
+      - name: Write job summary
+        if: always()
+        run: cat perf-results/summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results
+          path: perf-results/
+          if-no-files-found: ignore
+          retention-days: 30
