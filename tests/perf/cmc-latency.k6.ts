@@ -22,7 +22,9 @@ const DURATION = '3m'
 // once there's a baseline to compare against.
 const MAX_P95_MS = 1500
 const MAX_P99_MS = 3000
-const MAX_FAILED_RATE = 0.01
+// Any failed request fails the run. At ~60 requests per run, a percentage limit
+// under ~2% would mean zero anyway, so this says so explicitly.
+const ZERO_FAILED_REQUESTS = 'rate==0'
 const MIN_CHECKS_RATE = 0.99
 
 const ENDPOINTS = ['simple-price', 'quotes-latest'] as const
@@ -49,7 +51,7 @@ export const options: Options = {
   },
   summaryTrendStats: ['min', 'med', 'avg', 'p(95)', 'p(99)', 'max'],
   thresholds: {
-    http_req_failed: [`rate<${MAX_FAILED_RATE}`],
+    http_req_failed: [ZERO_FAILED_REQUESTS],
     checks: [`rate>${MIN_CHECKS_RATE}`],
     rate_limited: [{ threshold: 'count<1', abortOnFail: true }],
     ...Object.fromEntries(
