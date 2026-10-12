@@ -1,9 +1,16 @@
 import 'dotenv/config'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { chromium } from '@playwright/test'
-import type { JSONReport, JSONReportSuite } from '@playwright/test/reporter'
+import type {
+  JSONReport,
+  JSONReportSpec,
+  JSONReportSuite,
+  JSONReportTestResult,
+} from '@playwright/test/reporter'
 import { promptLocalModel } from '../shared/localModel.mts'
 import { auditChange, reportAuditBlock } from '../self-heal-commit-auditor/auditChange.mts'
 
@@ -17,13 +24,38 @@ const JSON_REPORT_PATH = path.join(REPO_ROOT, '.agents/coinmarketcap-navigation/
 // its report never mixes with the BTC price or simple price suites.
 const ALLURE_SUITE = 'navigation'
 const ALLURE_RESULTS_DIR = path.join(REPO_ROOT, 'allure-results', ALLURE_SUITE)
+// Verifying a navigation-target fix runs a spec that isn't on this branch, so
+// its results go to a throwaway bucket rather than this suite's report.
+const VERIFY_ALLURE_SUITE = 'navigation-verify'
+const PLAYWRIGHT_BIN = path.join(REPO_ROOT, 'node_modules/.bin/playwright')
+const CI_GIT_IDENTITY = ['-c', 'user.name=nknysh', '-c', 'user.email=nknysh@gmail.com']
 
 interface TestFailure {
   title: string
+  // Spec file path relative to the repo root, as the JSON report gives it.
+  file: string
   error: string
 }
 
-function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
+interface TestRun {
+  passed: boolean
+  failures: TestFailure[]
+  passedTitles: Set<string>
+}
+
+function toFailure(spec: JSONReportSpec, result: JSONReportTestResult): TestFailure {
+  // All errors, not just the first: on a test timeout the first is a bare
+  // "Test timeout of Nms exceeded." and the call log that says what was being
+  // waited for is only in the later ones.
+  const messages = (result.errors ?? []).map(e => e.message).filter(Boolean)
+  return {
+    title: spec.title,
+    file: spec.file,
+    error: stripVTControlCharacters(messages.join('\n\n') || result.error?.message || 'unknown error'),
+  }
+}
+
+function runE2ETests(options: { args?: string[]; env?: NodeJS.ProcessEnv } = {}): TestRun {
   // Remove any previous report so a run that crashes before writing one (bad
   // config, import error) fails loudly below instead of reading a stale file.
   fs.rmSync(JSON_REPORT_PATH, { force: true })
@@ -33,7 +65,7 @@ function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
     // PLAYWRIGHT_JSON_OUTPUT_NAME is set, keeping its allure-playwright options.
     // PLAYWRIGHT_HTML_OPEN=never stops a local failing run from blocking on the
     // html reporter's report server.
-    execSync('npx playwright test --project=e2e', {
+    execFileSync(PLAYWRIGHT_BIN, ['test', '--project=e2e', ...(options.args ?? [])], {
       cwd: REPO_ROOT,
       stdio: ['ignore', 'ignore', 'inherit'],
       env: {
@@ -41,6 +73,7 @@ function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
         ALLURE_SUITE,
         PLAYWRIGHT_JSON_OUTPUT_NAME: JSON_REPORT_PATH,
         PLAYWRIGHT_HTML_OPEN: 'never',
+        ...options.env,
       },
     })
   } catch {
@@ -49,17 +82,14 @@ function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
 
   const report: JSONReport = JSON.parse(fs.readFileSync(JSON_REPORT_PATH, 'utf-8'))
   const failures: TestFailure[] = []
+  const passedTitles = new Set<string>()
 
   const walk = (suite: JSONReportSuite): void => {
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
         for (const result of test.results ?? []) {
-          if (result.status !== 'passed' && result.status !== 'skipped') {
-            failures.push({
-              title: spec.title,
-              error: result.error?.message ?? result.errors[0]?.message ?? 'unknown error',
-            })
-          }
+          if (result.status === 'passed') passedTitles.add(spec.title)
+          else if (result.status !== 'skipped') failures.push(toFailure(spec, result))
         }
       }
     }
@@ -71,10 +101,176 @@ function runE2ETests(): { passed: boolean; failures: TestFailure[] } {
   // is undebuggable after the fact: the workflow doesn't upload the JSON report,
   // so the console log is the only record of which test broke and why.
   for (const failure of failures) {
-    console.log(`[coinmarketcap-navigation]   ✗ ${failure.title}\n${failure.error.slice(0, 500)}`)
+    console.log(`[coinmarketcap-navigation]   ✗ ${failure.title}\n${failure.error.slice(0, 1000)}`)
   }
 
-  return { passed: failures.length === 0, failures }
+  return { passed: failures.length === 0, failures, passedTitles }
+}
+
+function appendStepSummary(markdown: string): void {
+  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${markdown}\n\n`)
+}
+
+// A tab that still resolves and clicks fine but now lands somewhere else: the
+// site moved the tab's destination. No locator patch can fix that - only the
+// spec's expectedPath can - so it's reported and proposed as a PR for a human
+// to review, never committed directly.
+interface NavigationDrift {
+  title: string
+  file: string
+  expectedPath: string
+  actualUrl: string
+  actualPath: string
+}
+
+function findNavigationDrift(failure: TestFailure): NavigationDrift | undefined {
+  // The spec waits with page.waitForURL(`**${expectedPath}*`); its call log
+  // names that glob and every URL the page actually navigated to.
+  const expected = /waiting for navigation to "\*\*(\/[^"*]*)\*"/.exec(failure.error)
+  const actualUrl = [...failure.error.matchAll(/navigated to "([^"]+)"/g)].at(-1)?.[1]
+  if (!expected || !actualUrl) return undefined
+
+  const actualPath = new URL(actualUrl).pathname
+  // Landed on the expected path but the wait still timed out (e.g. the load
+  // event never fired) - not a destination change.
+  if (actualPath === expected[1]) return undefined
+
+  return { title: failure.title, file: failure.file, expectedPath: expected[1], actualUrl, actualPath }
+}
+
+function reportNavigationDrift(drifts: NavigationDrift[]): void {
+  for (const drift of drifts) {
+    console.error(
+      `[coinmarketcap-navigation] navigation target changed for "${drift.title}": ` +
+        `expected ${drift.expectedPath}, actual ${drift.actualUrl}`
+    )
+  }
+  appendStepSummary(
+    [
+      '### ⚠️ Navigation target changed',
+      '',
+      driftTable(drifts),
+    ].join('\n')
+  )
+}
+
+function driftTable(drifts: NavigationDrift[]): string {
+  return [
+    '| Test | Expected path | Actual URL | Proposed `expectedPath` |',
+    '| --- | --- | --- | --- |',
+    ...drifts.map(
+      d => `| ${d.title} | \`${d.expectedPath}\` | \`${d.actualUrl}\` | \`${d.actualPath}\` |`
+    ),
+  ].join('\n')
+}
+
+function escapeRegExp(text: string): string {
+  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+}
+
+function git(...args: string[]): string {
+  return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'inherit'] }).trim()
+}
+
+function gh(...args: string[]): string {
+  return execFileSync('gh', args, { cwd: REPO_ROOT, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'inherit'] }).trim()
+}
+
+// Rewrites each drifted test's expectedPath in its spec, verifies the drifted
+// tests then pass against the live site, and (in CI only) opens a PR with the
+// change. The working tree is always restored afterwards, so the rest of the
+// run - and any locator heal committed to this branch - never sees it.
+function proposeNavigationFix(drifts: NavigationDrift[]): void {
+  const originals = new Map<string, string>()
+  const fixable: NavigationDrift[] = []
+
+  try {
+    for (const drift of drifts) {
+      const filePath = path.join(REPO_ROOT, drift.file)
+      const source = fs.readFileSync(filePath, 'utf-8')
+      if (!originals.has(drift.file)) originals.set(drift.file, source)
+
+      const needle = `expectedPath: '${drift.expectedPath}'`
+      if (source.split(needle).length !== 2) {
+        console.error(
+          `[coinmarketcap-navigation] can't find a unique ${needle} in ${drift.file}; not proposing a fix for "${drift.title}"`
+        )
+        continue
+      }
+      fs.writeFileSync(filePath, source.replace(needle, `expectedPath: '${drift.actualPath}'`))
+      fixable.push(drift)
+    }
+    if (fixable.length === 0) return
+
+    console.log('[coinmarketcap-navigation] verifying the proposed expectedPath change')
+    const verify = runE2ETests({
+      args: ['--grep', fixable.map(d => escapeRegExp(d.title)).join('|')],
+      env: { ALLURE_SUITE: VERIFY_ALLURE_SUITE, SKIP_BTC_PRICE_HEAL: '1' },
+    })
+    // passedTitles guards against a grep that matched nothing passing vacuously.
+    if (!verify.passed || !fixable.every(d => verify.passedTitles.has(d.title))) {
+      console.error('[coinmarketcap-navigation] proposed expectedPath change still fails; not opening a PR')
+      appendStepSummary('The proposed `expectedPath` change still failed against the live site, so no PR was opened.')
+      return
+    }
+
+    if (!process.env.CI) {
+      console.log('[coinmarketcap-navigation] verified; not in CI, so not opening a PR. Proposed change:')
+      console.log(git('diff', '--', ...originals.keys()))
+      return
+    }
+
+    openNavigationFixPr(fixable, [...originals.keys()])
+  } finally {
+    for (const [file, source] of originals) fs.writeFileSync(path.join(REPO_ROOT, file), source)
+  }
+}
+
+function openNavigationFixPr(drifts: NavigationDrift[], files: string[]): void {
+  const baseBranch = git('rev-parse', '--abbrev-ref', 'HEAD')
+  // Keyed on the exact change, so a daily re-run finds its own open PR instead
+  // of opening a duplicate, while a further destination change gets a new one.
+  const changeKey = drifts.map(d => `${d.title}|${d.expectedPath}|${d.actualPath}`).join('\n')
+  const branch = `self-heal/navigation-target-${createHash('sha256').update(changeKey).digest('hex').slice(0, 10)}`
+
+  const existing = gh('pr', 'list', '--head', branch, '--state', 'open', '--json', 'url', '--jq', '.[0].url // ""')
+  if (existing) {
+    console.log(`[coinmarketcap-navigation] fix PR already open: ${existing}`)
+    appendStepSummary(`Fix PR already open: ${existing}`)
+    return
+  }
+
+  const title = `Update navigation test for changed tab destination${drifts.length > 1 ? 's' : ''}`
+  const runUrl = process.env.GITHUB_RUN_ID
+    ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+    : undefined
+  const body = [
+    'CoinMarketCap changed where these homepage tabs navigate, so their tests time out waiting for the old URL.',
+    'The tab locators still match, so the locator self-heal can\'t fix this.',
+    '',
+    driftTable(drifts),
+    '',
+    'The spec only checks the pathname, so the new URL\'s query string isn\'t asserted.',
+    'Check that the new destination is intended before merging.',
+    '',
+    'The updated tests passed against the live site before this PR was opened.',
+    ...(runUrl ? ['', `Opened by [the navigation self-heal run](${runUrl}).`] : []),
+  ].join('\n')
+
+  try {
+    git('switch', '-C', branch)
+    git('add', '--', ...files)
+    git(...CI_GIT_IDENTITY, 'commit', '--no-verify', '-m', title, '--', ...files)
+    git('push', '--force', 'origin', branch)
+    const prUrl = gh('pr', 'create', '--base', baseBranch, '--head', branch, '--title', title, '--body', body)
+    console.log(`[coinmarketcap-navigation] opened fix PR: ${prUrl}`)
+    appendStepSummary(`Opened fix PR: ${prUrl}`)
+  } catch (error) {
+    console.error('[coinmarketcap-navigation] failed to open fix PR', error)
+    appendStepSummary('Opening the fix PR failed; see the job log.')
+  } finally {
+    git('switch', baseBranch)
+  }
 }
 
 // Distinguishes a stale-selector failure (worth self-healing) from a genuine
@@ -194,9 +390,7 @@ function commitHealedLocator(): void {
   // In CI there's no configured git identity; scope one to this commit only
   // so we never touch a developer's global/local git config, while still
   // attributing the commit to the repo owner rather than a bot account.
-  const identity = process.env.CI
-    ? '-c user.name="nknysh" -c user.email="nknysh@gmail.com" '
-    : ''
+  const identity = process.env.CI ? `${CI_GIT_IDENTITY.join(' ')} ` : ''
 
   try {
     execSync(`git add ${PAGE_OBJECT_GIT_PATH}`, { stdio: 'inherit', cwd: REPO_ROOT })
@@ -223,7 +417,24 @@ async function main(): Promise<void> {
     return
   }
 
-  const locatorFailures = initial.failures.filter(isLocatorFailure)
+  // Deduped by title: CI retries report the same drift once per attempt.
+  const drifts = [
+    ...new Map(
+      initial.failures.map(findNavigationDrift).filter(d => d !== undefined).map(d => [d.title, d])
+    ).values(),
+  ]
+  const driftTitles = new Set(drifts.map(d => d.title))
+  if (drifts.length > 0) {
+    // Still a failing run: main keeps failing until the fix PR is merged.
+    process.exitCode = 1
+    reportNavigationDrift(drifts)
+    proposeNavigationFix(drifts)
+  }
+
+  const otherFailures = initial.failures.filter(f => !driftTitles.has(f.title))
+  if (otherFailures.length === 0) return
+
+  const locatorFailures = otherFailures.filter(isLocatorFailure)
   if (locatorFailures.length === 0) {
     console.error(
       '[coinmarketcap-navigation] tests failed for reasons other than a stale locator; leaving for a human'
@@ -256,7 +467,8 @@ async function main(): Promise<void> {
   console.log('[coinmarketcap-navigation] re-running tests to verify the patch')
   let verified = false
   try {
-    verified = runE2ETests().passed
+    // Drifted tests still fail here: their fix is on the PR branch, not this one.
+    verified = runE2ETests().failures.every(f => driftTitles.has(f.title))
   } finally {
     // Also runs if verification throws, so a patched file is never left behind unverified.
     if (!verified) fs.writeFileSync(PAGE_OBJECT_PATH, originalSource)
