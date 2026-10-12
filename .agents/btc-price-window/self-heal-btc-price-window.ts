@@ -1,11 +1,50 @@
 import 'dotenv/config'
 import { execSync } from 'node:child_process'
+import fs from 'node:fs'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
-import { readBtcPriceWindow, writeBtcPriceWindow } from './btcPriceWindow'
-import { auditChange, reportAuditBlock } from '../self-heal-commit-auditor/auditChange.mts'
+import { BtcPriceWindow, readBtcPriceWindow, writeBtcPriceWindow } from './btcPriceWindow'
 
 const WINDOW_JSON_GIT_PATH = '.agents/btc-price-window/btc-price-window.json'
 const SYMBOL_BTC = 'BTC'
+// Largest accepted distance between the fetched price and the current
+// window's centre, as a fraction of the price. BTC rarely moves this much
+// between 4-hourly runs; a bigger jump more likely means a bad API value
+// (e.g. a decimal-place error) than real movement.
+const MAX_SHIFT_RATIO = 0.1
+
+// These checks used to go to the local-model auditor, but they're all
+// arithmetic and the 7B model got the comparisons wrong, e.g. blocking a valid
+// recentring because the bounds were "inverted". Code gets them right every time.
+function recentringProblems(current: BtcPriceWindow, price: number, proposed: BtcPriceWindow): string[] {
+  if (!Number.isFinite(price) || price <= 0) return [`fetched price ${price} is not a positive number`]
+
+  const problems: string[] = []
+  if (proposed.min >= proposed.max) {
+    problems.push(`proposed bounds are inverted: min ${proposed.min} >= max ${proposed.max}`)
+  }
+  if (proposed.max - proposed.min !== current.max - current.min) {
+    problems.push(
+      `proposed width ${proposed.max - proposed.min} differs from current width ${current.max - current.min}`
+    )
+  }
+  const currentCentre = (current.min + current.max) / 2
+  const shift = Math.abs(price - currentCentre)
+  if (shift > price * MAX_SHIFT_RATIO) {
+    problems.push(
+      `price ${price} is ${Math.round(shift)} from the current window's centre ${currentCentre}, ` +
+        `more than ${MAX_SHIFT_RATIO * 100}% of the price`
+    )
+  }
+  return problems
+}
+
+function reportBlockedRecentring(problems: string[]): void {
+  const reason = problems.join('; ')
+  console.error(`[self-heal-btc-price-window] recentring blocked, window left unchanged: ${reason}`)
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### 🚫 BTC price window recentring blocked\n\n${reason}\n\n`)
+  }
+}
 
 function commitHealedWindow(): void {
   // In CI there's no configured git identity; scope one to this commit only
@@ -60,25 +99,9 @@ export default async function globalSetup(): Promise<void> {
     `[self-heal-btc-price-window] price ${price} outside [${window.min}, ${window.max}], recentring to [${newMin}, ${newMax}]`
   )
 
-  const audit = await auditChange({
-    systemPrompt: [
-      'You audit an automated recentring of a BTC price-alert window used by a test',
-      'assertion. You are given the old window, the live BTC price that triggered the',
-      'recentre, and the proposed new window. Flag CRITICAL if: the price is',
-      'non-positive or implausible for BTC, the new window width does not match the old',
-      'width, the bounds are inverted (min >= max), or the shift from the old window is',
-      'wildly disproportionate to normal BTC volatility over a several-hour interval.',
-      'Otherwise PASS.',
-    ].join(' '),
-    userPrompt: [
-      `old window: min=${window.min}, max=${window.max}, width=${width}`,
-      `fetched price: ${price}`,
-      `proposed new window: min=${newMin}, max=${newMax}, width=${newMax - newMin}`,
-    ].join('\n'),
-  })
-
-  if (audit.critical) {
-    reportAuditBlock('BTC price window recentring (window left unchanged)', audit.reasoning)
+  const problems = recentringProblems(window, price, { min: newMin, max: newMax })
+  if (problems.length > 0) {
+    reportBlockedRecentring(problems)
     // A plain warning would leave a blocked recentring silently invisible in
     // CI, since nothing else in this script fails the job - force the job
     // red so it's not missed among otherwise-green runs.
@@ -86,7 +109,7 @@ export default async function globalSetup(): Promise<void> {
     return
   }
 
-  console.log('[self-heal-btc-price-window] auditor passed the recentring, committing')
+  console.log('[self-heal-btc-price-window] recentring checks passed, committing')
   writeBtcPriceWindow({ min: newMin, max: newMax })
   commitHealedWindow()
 }

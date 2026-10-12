@@ -44,10 +44,8 @@ export async function auditChange(params: {
 }
 
 // Called by a caller's CRITICAL branch. A plain console.error can scroll off
-// in a long CI log (especially in the price-window heal, which doesn't fail
-// the job on a block), so this also writes to the GitHub Actions job summary
-// when running in CI, where a blocked commit is otherwise easy to miss since
-// the workflow can still finish green.
+// in a long CI log, so this also writes to the GitHub Actions job summary
+// when running in CI, where a blocked commit is otherwise easy to miss.
 export function reportAuditBlock(context: string, reasoning: string): void {
   console.error(
     ['', `🚫 [self-heal-commit-auditor] BLOCKED — ${context}`, reasoning, ''].join('\n')

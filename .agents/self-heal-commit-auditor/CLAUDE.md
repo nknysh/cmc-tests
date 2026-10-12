@@ -1,20 +1,22 @@
 # Self-heal commit auditor
 
-`auditChange.mts` is a shared audit gate, not a standalone script — both
-self-heal automations import and call it before they commit:
+`auditChange.mts` is an audit gate, not a standalone script.
+`.agents/coinmarketcap-navigation/self-heal-navigation-locators.mts` calls it
+after its patch has already passed e2e re-verification, to catch a patch
+that happens to make tests pass while also changing something beyond the
+broken locator (an assertion, a method signature, an overly broad/fragile
+selector).
 
-- `.agents/coinmarketcap-navigation/self-heal-navigation-locators.mts` calls it
-  after its patch has already passed e2e re-verification, to catch a patch
-  that happens to make tests pass while also changing something beyond the
-  broken locator (an assertion, a method signature, an overly broad/fragile
-  selector).
-- `.agents/btc-price-window/self-heal-btc-price-window.ts` calls it before
-  writing the recentred `[min, max]` window, since that script has no
-  test-based verification step at all — the audit is the only check between
-  a bad price fetch and a silently widened window.
+The BTC price window heal used to call it too, but its checks are all
+arithmetic (positive price, unchanged width, min < max, size of the shift),
+and the local model got those comparisons wrong: on 2026-10-12 it blocked
+valid recentrings as "inverted" or "non-positive". That script now checks
+the recentring in code (`recentringProblems` in
+`.agents/btc-price-window/self-heal-btc-price-window.ts`). Keep this auditor
+for judgments code can't make, not for numeric checks.
 
-Both self-heal scripts commit with `--no-verify` (see root `CLAUDE.md`), so
-the pre-commit `typescript-code-review` hook never sees these changes. That
+The navigation heal commits with `--no-verify` (see root `CLAUDE.md`), so
+the pre-commit `typescript-code-review` hook never sees its changes. That
 hook also depends on the `claude` CLI / paid Anthropic API, which the
 self-heal scripts are built to avoid entirely — so this auditor runs on the
 same **local, offline model** the navigation heal already uses
@@ -23,20 +25,16 @@ shared `.agents/shared/localModel.mts` helper). No API key, no network call
 to an LLM provider, and no second model download — it reuses the navigation
 heal's existing model cache directory
 (`.agents/coinmarketcap-navigation/models/`, gitignored, cached by
-`actions/cache` under the key `qwen2.5-coder-7b-instruct-q4_k_m-gguf` in both
-heal workflows and `api-tests.yml`, whose run triggers the BTC window heal via
-`globalSetup`).
+`actions/cache` under the key `qwen2.5-coder-7b-instruct-q4_k_m-gguf` in the
+navigation heal workflow).
 
 The model is asked for a strict first line (`VERDICT: PASS` or
 `VERDICT: CRITICAL`) plus a short reasoning paragraph. **It fails closed**:
 if the response doesn't parse as a clean verdict, that's treated as
 `CRITICAL` — an unreviewed automated commit is worse than a false-positive
-block a human can clear. On `CRITICAL`, the calling script reverts/discards
-the proposed change and skips the commit entirely (the navigation script
-also sets a non-zero exit code, matching its existing "leave for a human"
-paths; the price-window script just leaves the existing window in place, so
-a genuine drift will surface as an ordinary test failure instead of being
-silently accepted).
+block a human can clear. On `CRITICAL`, the navigation script reverts the
+proposed patch, skips the commit and sets a non-zero exit code, matching its
+existing "leave for a human" paths.
 
 `auditChange` only returns a verdict — it never writes, reverts, or commits
 anything itself; that stays the caller's responsibility.

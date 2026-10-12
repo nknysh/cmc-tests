@@ -29,12 +29,6 @@ jobs:
 
       - run: npm ci --ignore-scripts
 
-      - name: Cache local GGUF model
-        uses: actions/cache@v4
-        with:
-          path: .agents/coinmarketcap-navigation/models
-          key: qwen2.5-coder-7b-instruct-q4_k_m-gguf
-
       # Per-suite Allure history lives on gh-pages so each run's results accumulate.
       # Restored before the tests: `allure run` builds the report (and appends
       # history) as soon as they finish.
