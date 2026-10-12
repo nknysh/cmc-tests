@@ -29,7 +29,7 @@ const FULL_PAGE_TABS: readonly { index: NavTabIndex; label: string; expectedPath
   { index: 'tab-stonks', label: 'Stonks', expectedPath: '/stonks/' },
   { index: 'tab-stocks', label: 'RWA', expectedPath: '/real-world-assets/' },
   { index: 'tab-derivatives', label: 'Derivatives', expectedPath: '/derivatives/' },
-  { index: 'tab-bstocks', label: 'bStocks', expectedPath: '/view/bstocks/' },
+  { index: 'tab-bstocks', label: 'bStocks', expectedPath: '/real-world-assets/' },
 ]
 
 test.describe('CoinMarketCap homepage first-level navigation', { tag: '@navigation' }, () => {
