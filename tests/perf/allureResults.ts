@@ -25,8 +25,12 @@ export interface AllureResultsOptions {
 
 type Status = 'passed' | 'failed'
 
-const formatValue = (stat: string, value: number): string => {
-  if (stat === 'rate') return `${(value * 100).toFixed(2)}%`
+/**
+ * A Rate metric's `rate` is a 0–1 ratio (reported with `passes`/`fails`), but a
+ * Counter's `rate` is per second, so only the former is shown as a percentage.
+ */
+const formatValue = (stat: string, value: number, values: Record<string, number>): string => {
+  if (stat === 'rate') return 'passes' in values ? `${(value * 100).toFixed(2)}%` : `${value.toFixed(4)}/s`
   if (stat === 'count' || stat === 'passes' || stat === 'fails') return String(value)
   return `${Math.round(value)} ms`
 }
@@ -55,21 +59,24 @@ export function toAllureResults(data: SummaryData, options: AllureResultsOptions
   for (const [metricName, summary] of Object.entries(data.metrics)) {
     for (const [expression, { ok }] of Object.entries(summary?.thresholds ?? {})) {
       const { metric, endpoint } = parseMetricName(metricName)
-      const name = `${endpoint ?? 'overall'}: ${metric} ${expression}`
       const stat = thresholdStat(expression)
-      const observed = summary?.values[stat]
+      // Keyed on the stat, not the limit, so tightening a threshold keeps its history.
+      const id = `${endpoint ?? 'overall'}: ${metric} ${stat}`
+      const name = `${endpoint ?? 'overall'}: ${metric} ${expression}`
+      const values = summary?.values ?? {}
+      const observed = values[stat]
       const status: Status = ok ? 'passed' : 'failed'
       const uuid = `${runId}-${index++}`
 
       const result = {
         uuid,
-        historyId: name,
-        testCaseId: name,
+        historyId: id,
+        testCaseId: id,
         name,
-        fullName: `${options.suite}: ${name}`,
+        fullName: `${options.suite}: ${id}`,
         status,
         statusDetails: {
-          message: observed === undefined ? `${stat} not reported` : `${stat} = ${formatValue(stat, observed)}`,
+          message: observed === undefined ? `${stat} not reported` : `${stat} = ${formatValue(stat, observed, values)}`,
         },
         stage: 'finished',
         start,
@@ -79,8 +86,8 @@ export function toAllureResults(data: SummaryData, options: AllureResultsOptions
           { name: 'feature', value: endpoint ?? 'overall' },
           { name: 'framework', value: 'k6' },
         ],
-        steps: Object.entries(summary?.values ?? {}).map(([key, value]) => ({
-          name: `${key} = ${formatValue(key, value)}`,
+        steps: Object.entries(values).map(([key, value]) => ({
+          name: `${key} = ${formatValue(key, value, values)}`,
           status: 'passed',
           stage: 'finished',
           start,
