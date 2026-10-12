@@ -17,6 +17,23 @@ of the mechanics of a specific client or page object. Pair this with the
 `api-testing` and `e2e-testing` skills, which cover implementation patterns
 for this repo.
 
+## Contents
+
+Read the whole file before designing tests; each section below applies.
+
+- [One Behavior Per Test](#one-behavior-per-test)
+- [Test the Contract, Not the Implementation](#test-the-contract-not-the-implementation)
+- [Independent and Order-Agnostic](#independent-and-order-agnostic)
+- [Explicit Thresholds, Not Magic Numbers](#explicit-thresholds-not-magic-numbers)
+- [Equivalence Class Partitioning](#equivalence-class-partitioning)
+- [Boundary Value Analysis](#boundary-value-analysis)
+- [Fail Clearly, Not Deep](#fail-clearly-not-deep)
+- [Design for Diagnosability](#design-for-diagnosability)
+- [Cover the Right Levels](#cover-the-right-levels)
+- [One Flat Suite per API Endpoint](#one-flat-suite-per-api-endpoint)
+- [Deterministic Over Flaky](#deterministic-over-flaky)
+- [Name Tests as Specifications](#name-tests-as-specifications)
+
 ## One Behavior Per Test
 
 Each `test()` should verify a single observable behavior and fail for

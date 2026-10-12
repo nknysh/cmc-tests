@@ -9,6 +9,28 @@ metadata:
 
 Comprehensive Playwright patterns for building stable, fast, and maintainable E2E test suites.
 
+## Contents
+
+Read the whole file before writing or fixing E2E tests; each section below applies.
+
+- [Test File Organization](#test-file-organization)
+- [Page Object Model (POM)](#page-object-model-pom)
+- [Test Structure](#test-structure)
+- [Tags](#tags)
+- [Playwright Configuration](#playwright-configuration)
+- [Flaky Test Patterns](#flaky-test-patterns)
+  - [Quarantine](#quarantine)
+  - [Identify Flakiness](#identify-flakiness)
+  - [Common Causes & Fixes](#common-causes--fixes)
+- [Artifact Management](#artifact-management)
+  - [Screenshots](#screenshots)
+  - [Traces](#traces)
+  - [Video](#video)
+- [CI/CD Integration](#cicd-integration)
+- [Test Report Template](#test-report-template)
+- [Wallet / Web3 Testing](#wallet--web3-testing)
+- [Financial / Critical Flow Testing](#financial--critical-flow-testing)
+
 ## Test File Organization
 
 ```

@@ -15,6 +15,20 @@ Conventions for building a typed API client and testing it, derived from
 [src/clients/coinmarketcap](../../../src/clients/coinmarketcap) and
 [tests/api/btc-price.spec.ts](../../../tests/api/btc-price.spec.ts).
 
+## Contents
+
+Read the whole file before writing a client or spec; each section below applies.
+
+- [Client Folder Layout](#client-folder-layout)
+- [Client Class Shape](#client-class-shape)
+- [Types File](#types-file)
+- [Request/Response Logging](#requestresponse-logging)
+- [Error Handling](#error-handling)
+- [Config via Environment Variables](#config-via-environment-variables)
+- [API Spec Structure](#api-spec-structure)
+- [Parameterized Testing](#parameterized-testing)
+- [Self-Healing Value Windows](#self-healing-value-windows)
+
 ## Client Folder Layout
 
 Each third-party API gets its own folder under `src/clients/<api-name>/`:

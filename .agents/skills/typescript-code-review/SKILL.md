@@ -7,6 +7,19 @@ description: Perform comprehensive code reviews for TypeScript projects, analyzi
 
 Perform thorough, professional code reviews for TypeScript code with focus on type safety, best practices, performance, security, and maintainability.
 
+## Contents
+
+Read the whole file before reviewing; each section below applies.
+
+- [Review Process](#review-process)
+  - [1. Core Review Categories](#1-core-review-categories)
+  - [2. Output Structure](#2-output-structure)
+  - [3. Code Review Guidelines](#3-code-review-guidelines)
+  - [4. Reference Files](#4-reference-files)
+  - [5. TypeScript Configuration Review](#5-typescript-configuration-review)
+  - [6. Framework-Specific Considerations](#6-framework-specific-considerations)
+  - [7. Automated Checks to Recommend](#7-automated-checks-to-recommend)
+
 ## Review Process
 
 ### 1. Core Review Categories
