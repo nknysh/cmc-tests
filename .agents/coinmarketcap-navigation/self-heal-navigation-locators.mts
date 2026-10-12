@@ -159,9 +159,29 @@ function driftTable(drifts: NavigationDrift[]): string {
     '| Test | Expected path | Actual URL | Proposed `expectedPath` |',
     '| --- | --- | --- | --- |',
     ...drifts.map(
-      d => `| ${d.title} | \`${d.expectedPath}\` | \`${d.actualUrl}\` | \`${d.actualPath}\` |`
+      d => `| ${textCell(d.title)} | ${codeCell(d.expectedPath)} | ${codeCell(d.actualUrl)} | ${codeCell(d.actualPath)} |`
     ),
   ].join('\n')
+}
+
+// Cell values come from test titles and the live site's URLs, so they can hold
+// characters that end a table cell or start Markdown formatting. A newline
+// would end the row; GFM unescapes `\|` even inside a code span.
+function tableSafe(value: string): string {
+  return value.replaceAll(/\r?\n/g, ' ').replaceAll('|', String.raw`\|`)
+}
+
+function textCell(value: string): string {
+  return tableSafe(value.replaceAll(/[\\`*_[\]<>]/g, String.raw`\$&`))
+}
+
+// Backslashes don't escape inside a code span, so instead the fence is one
+// backtick longer than the longest backtick run in the value.
+function codeCell(value: string): string {
+  const longestRun = Math.max(0, ...(value.match(/`+/g) ?? []).map(run => run.length))
+  const fence = '`'.repeat(longestRun + 1)
+  const padding = value.startsWith('`') || value.endsWith('`') ? ' ' : ''
+  return `${fence}${padding}${tableSafe(value)}${padding}${fence}`
 }
 
 function escapeRegExp(text: string): string {
