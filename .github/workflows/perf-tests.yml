@@ -8,20 +8,53 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+# One gh-pages publisher at a time; each workflow pushes to the same branch.
+concurrency:
+  group: gh-pages-publish
+  cancel-in-progress: false
 
 jobs:
   perf:
     runs-on: ubuntu-latest
+    # Own Allure suite (results/report/history, see allurerc.mjs). The k6
+    # script's handleSummary writes one Allure result per threshold.
+    env:
+      ALLURE_SUITE: perf
     steps:
       - uses: actions/checkout@v7
 
-      # k6 bundles the TypeScript script itself, so no npm install is needed.
+      # Only for the allure CLI; k6 bundles the TypeScript script itself.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - run: npm ci --ignore-scripts
+
       - uses: grafana/setup-k6-action@43b9fc21641a76002687994433dd586f56e791b1 # v1.2.2
 
-      # Exits non-zero (99) when a threshold in the script is breached.
+      # Restored before the run: `allure run` builds the report (and appends
+      # history) as soon as k6 finishes.
+      - name: Restore Allure history
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Copy Allure history
+        run: |
+          mkdir -p allure-history
+          cp "gh-pages/allure-history/$ALLURE_SUITE.jsonl" allure-history/ 2>/dev/null || true
+
+      # `allure run` exits with the perf quality gate's result: a breached
+      # threshold is a failed test, and a run that dies before handleSummary
+      # leaves no results, which fails minTestsCount.
       - name: Run latency baseline
-        run: mkdir -p perf-results && k6 run tests/perf/cmc-latency.k6.ts
+        run: |
+          mkdir -p perf-results "allure-results/$ALLURE_SUITE"
+          ./node_modules/.bin/allure run -- k6 run tests/perf/cmc-latency.k6.ts
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
 
@@ -37,3 +70,28 @@ jobs:
           path: perf-results/
           if-no-files-found: ignore
           retention-days: 30
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-perf
+          path: allure-results/perf/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Publish Allure report to gh-pages
+        if: always()
+        run: |
+          [ -d "allure-report/$ALLURE_SUITE" ] || exit 0
+          git fetch origin gh-pages:gh-pages 2>/dev/null || git worktree add --orphan -b gh-pages _pages
+          [ -d _pages ] || git worktree add _pages gh-pages
+          rm -rf "_pages/$ALLURE_SUITE"
+          mkdir -p "_pages/$ALLURE_SUITE" _pages/allure-history
+          cp -r "allure-report/$ALLURE_SUITE/." "_pages/$ALLURE_SUITE/"
+          cp "allure-history/$ALLURE_SUITE.jsonl" _pages/allure-history/
+          cp .github/allure-summary/index.html _pages/index.html
+          cd _pages
+          git add -A
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "Allure report (perf)" || exit 0
+          git push origin gh-pages

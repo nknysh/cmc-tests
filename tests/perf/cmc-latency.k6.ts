@@ -3,6 +3,7 @@ import { check, fail } from 'k6'
 import { Counter } from 'k6/metrics'
 import type { Options, Scenario } from 'k6/options'
 import { API_KEY_HEADER, CMC_BASE_URL } from '../contract/helpers/constants.ts'
+import { toAllureResults, type SummaryData } from './allureResults.ts'
 
 /**
  * Low-rate latency baseline for the CMC endpoints the Basic plan allows
@@ -28,8 +29,11 @@ const ZERO_FAILED_REQUESTS = 'rate==0'
 const MIN_CHECKS_RATE = 0.99
 
 const ENDPOINTS = ['simple-price', 'quotes-latest'] as const
-// k6 doesn't create directories; test:perf and the workflow mkdir this first.
+// k6 doesn't create directories; test:perf and the workflow mkdir these first.
 const SUMMARY_DIR = 'perf-results'
+// Matches allurerc.mjs's resultsDir for ALLURE_SUITE=perf.
+const ALLURE_SUITE = 'perf'
+const ALLURE_RESULTS_DIR = `allure-results/${ALLURE_SUITE}`
 
 /** HTTP 429s; one aborts the run so a rate-limited key doesn't keep burning credits. */
 const rateLimited = new Counter('rate_limited')
@@ -109,14 +113,10 @@ export function quotesLatest(): void {
   check(data, { 'quotes-latest: has BTC price': (d) => (d?.[SYMBOL]?.[0]?.quote?.USD?.price ?? 0) > 0 })
 }
 
-interface MetricSummary {
-  values: Record<string, number>
-}
-
 const ms = (value: number | undefined): string => (value === undefined ? 'n/a' : `${Math.round(value)} ms`)
 
-/** Markdown table for stdout and the GitHub job summary, plus the raw JSON. */
-export function handleSummary(data: { metrics: Record<string, MetricSummary | undefined> }): Record<string, string> {
+/** Markdown table for stdout and the GitHub job summary, the raw JSON, and one Allure result per threshold. */
+export function handleSummary(data: SummaryData): Record<string, string> {
   const rows = ENDPOINTS.map((endpoint) => {
     const duration = data.metrics[`http_req_duration{endpoint:${endpoint}}`]?.values ?? {}
     return `| ${endpoint} | ${ms(duration.med)} | ${ms(duration['p(95)'])} | ${ms(duration['p(99)'])} | ${ms(duration.max)} |`
@@ -138,5 +138,6 @@ export function handleSummary(data: { metrics: Record<string, MetricSummary | un
     stdout: markdown,
     [`${SUMMARY_DIR}/summary.md`]: markdown,
     [`${SUMMARY_DIR}/summary.json`]: JSON.stringify(data, null, 2),
+    ...toAllureResults(data, { suite: ALLURE_SUITE, resultsDir: ALLURE_RESULTS_DIR, summaryMarkdown: markdown }),
   }
 }

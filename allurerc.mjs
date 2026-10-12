@@ -1,8 +1,8 @@
 import process from 'node:process'
 import { defineConfig } from 'allure'
 
-// One report and one history file per suite (btc-price, contract, api, navigation), matching
-// the per-suite results dir set in playwright.config.ts.
+// One report and one history file per suite (btc-price, contract, api, navigation, perf), matching
+// the per-suite results dir set in playwright.config.ts (and, for perf, in tests/perf/cmc-latency.k6.ts).
 const suite = process.env.ALLURE_SUITE || 'adhoc'
 
 // Quality gate per suite. `allure run` (every CI test step) evaluates it into the report and
@@ -14,6 +14,8 @@ const qualityGateRules = {
   api: { maxFailures: 0, minTestsCount: 21 },
   contract: { maxFailures: 0, minTestsCount: 25 },
   navigation: { maxFailures: 0, minTestsCount: 11 },
+  // One result per k6 threshold.
+  perf: { maxFailures: 0, minTestsCount: 7 },
 }
 const rules = qualityGateRules[suite]
 
