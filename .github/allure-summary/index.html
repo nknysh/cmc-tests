@@ -9,18 +9,28 @@
   @media (prefers-color-scheme: dark) { :root { --bg:#12161d; --card:#1b212b; --text:#e7ebf1; --muted:#95a0b3; --line:#2b3441; --pass:#4cc38a; --fail:#ff7b6b; --other:#e0b050; } }
   * { box-sizing: border-box; }
   body { margin:0; padding:32px 16px; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
-  main { max-width:860px; margin:0 auto; }
+  main { max-width:1100px; margin:0 auto; }
   h1 { font-size:24px; margin:0 0 4px; }
   p.sub { color:var(--muted); margin:0 0 24px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; }
-  .card h2 { font-size:17px; margin:0 0 12px; display:flex; justify-content:space-between; align-items:center; }
+  .grid { display:grid; grid-template-columns:repeat(var(--cols,3),minmax(0,1fr)); gap:16px; }
+  .card { min-width:0; overflow-wrap:anywhere; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; }
+  .card h2 { font-size:17px; margin:0 0 12px; display:flex; flex-wrap:wrap; gap:6px; justify-content:space-between; align-items:center; }
   .badge { font-size:12px; font-weight:600; padding:2px 8px; border-radius:999px; border:1px solid currentColor; text-transform:uppercase; }
   .passed { color:var(--pass); } .failed { color:var(--fail); } .other { color:var(--other); }
   dl { display:grid; grid-template-columns:auto 1fr; gap:4px 16px; margin:0 0 16px; }
   dt { color:var(--muted); } dd { margin:0; text-align:right; font-variant-numeric:tabular-nums; }
   a { color:inherit; font-weight:600; }
   .err { color:var(--muted); }
+  @media (max-width:640px) {
+    body { padding:20px 16px; }
+    .grid { gap:8px; }
+    .card { padding:8px; font-size:11px; line-height:1.35; border-radius:8px; }
+    .card h2 { font-size:12px; margin-bottom:6px; }
+    .badge { font-size:9px; padding:0 5px; }
+    dl { gap:1px 4px; margin-bottom:8px; }
+    dd { font-weight:600; }
+    .wide { grid-column:1 / -1; text-align:left; }
+  }
 </style>
 </head>
 <body>
@@ -38,8 +48,10 @@ const reports = [
   { title: 'Performance (k6)', path: 'perf/' },
 ];
 const grid = document.getElementById('grid');
+// Two rows: at least three columns, more as reports are added.
+grid.style.setProperty('--cols', Math.max(3, Math.ceil(reports.length / 2)));
 
-function row(k, v) { return `<dt>${k}</dt><dd>${v}</dd>`; }
+function row(k, v, cls = '') { return `<dt class="${cls}">${k}</dt><dd class="${cls}">${v}</dd>`; }
 
 async function render({ title, path }) {
   const card = document.createElement('section');
@@ -66,7 +78,7 @@ async function render({ title, path }) {
         ${row('Broken', rest('broken'))}
         ${row('Skipped', rest('skipped'))}
         ${row('Duration', ((s.duration ?? 0) / 1000).toFixed(1) + ' s')}
-        ${row('Run at', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'n/a')}
+        ${row('Run at', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'n/a', 'wide')}
       </dl>
       <a href="${path}">Open full report →</a>`;
   } catch {
