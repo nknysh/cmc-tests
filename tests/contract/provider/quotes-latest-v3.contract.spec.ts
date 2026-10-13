@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { Severity, severity } from '@tests/helpers/severity'
 import { CmcErrorResponseSchema, QuotesLatestV3ResponseSchema } from '@src/clients/coinmarketcap/schemas'
 import { cmcRawGet } from '../helpers/cmcRawRequest'
-import { ERROR_CODE_INVALID_KEY, INVALID_API_KEY } from '../helpers/constants'
+import { CMC_ID_BTC, ERROR_CODE_INVALID_KEY, INVALID_API_KEY, QUOTES_LATEST_V3_IDS } from '../helpers/constants'
 import { expectMatchesSchema } from '../helpers/expectMatchesSchema'
 import { requireEnv } from '../helpers/requireEnv'
 
@@ -13,10 +13,6 @@ import { requireEnv } from '../helpers/requireEnv'
  */
 
 const QUOTES_LATEST_V3_PATH = '/v3/cryptocurrency/quotes/latest'
-/** BTC (a coin, `platform: null`) and USDC (a token, with a platform). */
-const ID_BTC = 1
-const ID_USDC = 3408
-const REQUESTED_IDS = [ID_BTC, ID_USDC]
 
 test.describe('Quotes Latest v3 provider contract — GET /v3/cryptocurrency/quotes/latest', { annotation: severity(Severity.BLOCKER) }, () => {
   test('a successful response matches the client contract', async ({ request }) => {
@@ -24,19 +20,19 @@ test.describe('Quotes Latest v3 provider contract — GET /v3/cryptocurrency/quo
 
     const { status, body } = await cmcRawGet(request, QUOTES_LATEST_V3_PATH, {
       apiKey,
-      params: { id: REQUESTED_IDS.join(',') },
+      params: { id: QUOTES_LATEST_V3_IDS.join(',') },
     })
 
     expect(status).toBe(200)
     const parsed = expectMatchesSchema(body, QuotesLatestV3ResponseSchema)
     // The schema covers every item's shape; the client also needs one item per requested id.
-    expect(parsed.data.map((item) => item.id).sort((a, b) => a - b)).toEqual(REQUESTED_IDS)
+    expect(parsed.data.map((item) => item.id).sort((a, b) => a - b)).toEqual(QUOTES_LATEST_V3_IDS)
   })
 
   test('an invalid API key response matches the error contract', async ({ request }) => {
     const { status, body } = await cmcRawGet(request, QUOTES_LATEST_V3_PATH, {
       apiKey: INVALID_API_KEY,
-      params: { id: String(ID_BTC) },
+      params: { id: String(CMC_ID_BTC) },
     })
 
     expect(status).toBe(401)

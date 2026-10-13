@@ -84,21 +84,26 @@ const ERROR_INVALID_API_KEY = 'error_code 1001: This API Key is invalid.'
 /** Comma-separated ids 1..count. Not every id in the range resolves. */
 const idRange = (count: number): string => Array.from({ length: count }, (_, i) => i + 1).join(',')
 
-let fullIdRangeCall: Promise<QuotesLatestEntry[]> | undefined
+let fullIdRangeCall: Promise<readonly QuotesLatestEntry[]> | undefined
 
 /**
  * Entries for ids 1..MAX_IDS_PER_CALL. That call costs 2 credits, so it's made
- * once per worker and shared by TC-65, TC-81 and TC-82. A failed test restarts
- * its worker, so a retry makes a fresh call rather than reusing a failure.
+ * once per worker, with its own client on CMC_API_KEY, and shared by TC-65,
+ * TC-81 and TC-82. The result is readonly because every caller sees the same
+ * array. A failed test restarts its worker, so a retry makes a fresh call
+ * rather than reusing a failure.
  */
-function fullIdRangeEntries(client: CoinMarketCapClient): Promise<QuotesLatestEntry[]> {
-  fullIdRangeCall ??= client.fetchQuotesLatest({ id: idRange(MAX_IDS_PER_CALL) }).then(({ entries }) => entries)
+function fullIdRangeEntries(): Promise<readonly QuotesLatestEntry[]> {
+  expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
+  fullIdRangeCall ??= new CoinMarketCapClient({ apiKey: apiKey! })
+    .fetchQuotesLatest({ id: idRange(MAX_IDS_PER_CALL) })
+    .then(({ entries }) => entries)
   return fullIdRangeCall
 }
 
 /** `count` ids known to resolve, taken from the shared call over the full id range. */
-async function resolvableIds(client: CoinMarketCapClient, count: number): Promise<string> {
-  const entries = await fullIdRangeEntries(client)
+async function resolvableIds(count: number): Promise<string> {
+  const entries = await fullIdRangeEntries()
   expect(entries.length, `ids 1..${MAX_IDS_PER_CALL} must yield at least ${count} assets`).toBeGreaterThanOrEqual(
     count,
   )
@@ -300,10 +305,7 @@ test.describe('CoinMarketCap API', () => {
       `a list of ${MAX_IDS_PER_CALL} ids is accepted`,
       { annotation: [{ type: 'test-case-id', description: '65' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
-
-        const entries = await fullIdRangeEntries(client)
+        const entries = await fullIdRangeEntries()
 
         expect(entries.length).toBeGreaterThan(0)
         expect(entries.length).toBeLessThanOrEqual(MAX_IDS_PER_CALL)
@@ -511,7 +513,7 @@ test.describe('CoinMarketCap API', () => {
       async () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
-        const ids = await resolvableIds(client, RESULTS_PER_CREDIT)
+        const ids = await resolvableIds(RESULTS_PER_CREDIT)
 
         const result = await client.fetchQuotesLatest({ id: ids })
 
@@ -526,7 +528,7 @@ test.describe('CoinMarketCap API', () => {
       async () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
-        const ids = await resolvableIds(client, RESULTS_PER_CREDIT + 1)
+        const ids = await resolvableIds(RESULTS_PER_CREDIT + 1)
 
         const result = await client.fetchQuotesLatest({ id: ids })
 

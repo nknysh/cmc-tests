@@ -2,7 +2,14 @@ import { test, expect } from '@playwright/test'
 import { Severity, severity } from '@tests/helpers/severity'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { CmcErrorResponseSchema, QuotesLatestV3ResponseSchema } from '@src/clients/coinmarketcap/schemas'
-import { API_KEY_HEADER, CMC_BASE_URL, DUMMY_API_KEY } from '../helpers/constants'
+import {
+  API_KEY_HEADER,
+  CMC_BASE_URL,
+  CMC_ID_BTC,
+  CMC_ID_USDC,
+  DUMMY_API_KEY,
+  QUOTES_LATEST_V3_IDS,
+} from '../helpers/constants'
 import { expectMatchesSchema } from '../helpers/expectMatchesSchema'
 import { stubFetch, type FetchStub } from '../helpers/stubFetch'
 import successFixture from '../fixtures/quotes-latest-v3.btc-usdc.json'
@@ -15,7 +22,7 @@ import invalidKeyFixture from '../fixtures/error.invalid-key-1001.quotes-latest-
  */
 
 const QUOTES_LATEST_V3_URL = `${CMC_BASE_URL}/v3/cryptocurrency/quotes/latest`
-const IDS_BTC_USDC = '1,3408'
+const IDS_BTC_USDC = QUOTES_LATEST_V3_IDS.join(',')
 const CURRENCY_ID_USD = '2781'
 const AUX_FIELDS = 'cmc_rank,platform'
 
@@ -81,7 +88,7 @@ test.describe('fetchQuotesLatest consumer contract — GET /v3/cryptocurrency/qu
     // tag objects → slugs, platform → { id, tokenAddress }, 0/1 flags → booleans.
     expect(entries).toEqual([
       {
-        id: 1,
+        id: CMC_ID_BTC,
         name: 'Bitcoin',
         symbol: 'BTC',
         slug: 'bitcoin',
@@ -98,7 +105,7 @@ test.describe('fetchQuotesLatest consumer contract — GET /v3/cryptocurrency/qu
         quotes: toQuotes(btc),
       },
       {
-        id: 3408,
+        id: CMC_ID_USDC,
         name: 'USDC',
         symbol: 'USDC',
         slug: 'usd-coin',
