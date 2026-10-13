@@ -84,9 +84,21 @@ const ERROR_INVALID_API_KEY = 'error_code 1001: This API Key is invalid.'
 /** Comma-separated ids 1..count. Not every id in the range resolves. */
 const idRange = (count: number): string => Array.from({ length: count }, (_, i) => i + 1).join(',')
 
-/** `count` ids known to resolve, taken from a live call over the full id range. */
+let fullIdRangeCall: Promise<QuotesLatestEntry[]> | undefined
+
+/**
+ * Entries for ids 1..MAX_IDS_PER_CALL. That call costs 2 credits, so it's made
+ * once per worker and shared by TC-65, TC-81 and TC-82. A failed test restarts
+ * its worker, so a retry makes a fresh call rather than reusing a failure.
+ */
+function fullIdRangeEntries(client: CoinMarketCapClient): Promise<QuotesLatestEntry[]> {
+  fullIdRangeCall ??= client.fetchQuotesLatest({ id: idRange(MAX_IDS_PER_CALL) }).then(({ entries }) => entries)
+  return fullIdRangeCall
+}
+
+/** `count` ids known to resolve, taken from the shared call over the full id range. */
 async function resolvableIds(client: CoinMarketCapClient, count: number): Promise<string> {
-  const { entries } = await client.fetchQuotesLatest({ id: idRange(MAX_IDS_PER_CALL) })
+  const entries = await fullIdRangeEntries(client)
   expect(entries.length, `ids 1..${MAX_IDS_PER_CALL} must yield at least ${count} assets`).toBeGreaterThanOrEqual(
     count,
   )
@@ -94,6 +106,12 @@ async function resolvableIds(client: CoinMarketCapClient, count: number): Promis
     .slice(0, count)
     .map((entry) => entry.id)
     .join(',')
+}
+
+/** The single entry a one-id lookup returns, failing readably if there isn't exactly one. */
+function onlyEntry(entries: QuotesLatestEntry[]): QuotesLatestEntry {
+  expect(entries, 'a single-id lookup must return exactly one asset').toHaveLength(1)
+  return entries[0]
 }
 
 const quoteCurrencies = (entry: QuotesLatestEntry) =>
@@ -285,7 +303,7 @@ test.describe('CoinMarketCap API', () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
 
-        const { entries } = await client.fetchQuotesLatest({ id: idRange(MAX_IDS_PER_CALL) })
+        const entries = await fullIdRangeEntries(client)
 
         expect(entries.length).toBeGreaterThan(0)
         expect(entries.length).toBeLessThanOrEqual(MAX_IDS_PER_CALL)
@@ -312,9 +330,8 @@ test.describe('CoinMarketCap API', () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
 
-        const {
-          entries: [entry],
-        } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const entry = onlyEntry(entries)
 
         expect(quoteCurrencies(entry)).toEqual([{ currency: CURRENCY_USD, currencyId: CURRENCY_ID_USD }])
         expect(entry.quotes[0].price).toBeGreaterThan(0)
@@ -328,9 +345,8 @@ test.describe('CoinMarketCap API', () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
 
-        const {
-          entries: [entry],
-        } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convert: CURRENCY_EUR })
+        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convert: CURRENCY_EUR })
+        const entry = onlyEntry(entries)
 
         expect(quoteCurrencies(entry)).toEqual([{ currency: CURRENCY_EUR, currencyId: CURRENCY_ID_EUR }])
         expect(entry.quotes[0].price).toBeGreaterThan(0)
@@ -344,9 +360,8 @@ test.describe('CoinMarketCap API', () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
 
-        const {
-          entries: [entry],
-        } = await client.fetchQuotesLatest({ id: String(CMC_ID_ETH), convert: SYMBOL_BTC })
+        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_ETH), convert: SYMBOL_BTC })
+        const entry = onlyEntry(entries)
 
         expect(quoteCurrencies(entry)).toEqual([{ currency: SYMBOL_BTC, currencyId: CMC_ID_BTC }])
         expect(entry.quotes[0].price).toBeGreaterThan(0)
@@ -360,9 +375,8 @@ test.describe('CoinMarketCap API', () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
 
-        const {
-          entries: [entry],
-        } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convertId: String(CURRENCY_ID_EUR) })
+        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convertId: String(CURRENCY_ID_EUR) })
+        const entry = onlyEntry(entries)
 
         expect(quoteCurrencies(entry)).toEqual([{ currency: CURRENCY_EUR, currencyId: CURRENCY_ID_EUR }])
         expect(entry.quotes[0].price).toBeGreaterThan(0)
@@ -419,9 +433,8 @@ test.describe('CoinMarketCap API', () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
 
-        const {
-          entries: [entry],
-        } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const entry = onlyEntry(entries)
 
         const missing = DEFAULT_AUX_FIELDS.filter((field) => entry[field] === undefined)
         expect(missing).toEqual([])
@@ -435,9 +448,8 @@ test.describe('CoinMarketCap API', () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
 
-        const {
-          entries: [entry],
-        } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), aux: AUX_CMC_RANK })
+        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), aux: AUX_CMC_RANK })
+        const entry = onlyEntry(entries)
 
         expect(entry.cmcRank).toBeDefined()
         const unexpected = FIELDS_EXCLUDED_BY_AUX_CMC_RANK.filter((field) => entry[field] !== undefined)
@@ -465,9 +477,8 @@ test.describe('CoinMarketCap API', () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
 
-        const {
-          entries: [entry],
-        } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const entry = onlyEntry(entries)
         const [quote] = entry.quotes
 
         expect(quote.price).toBeGreaterThan(0)

@@ -90,7 +90,7 @@ See `src/clients/coinmarketcap/` as the reference implementation, and `.claude/s
 - `provider/` (live, needs `CMC_API_KEY`) GETs each endpoint via Playwright's `request` fixture, bypassing the client, and validates the raw body. A failure means CMC changed the API. Gainers-losers is plan-gated on the Basic key, so only its 403/1006 and 401 envelopes are checked live.
 - `consumer/` (offline) stubs `globalThis.fetch` with a fixture from `fixtures/` and runs the real client. It asserts three things: the request (path, snake_case params, key header), the exact domain mapping, and error-envelope handling. Each fixture is itself schema-checked.
 - Shared values (base URL, key header, dummy/invalid keys, error code 1001) live in `helpers/constants.ts`; provider specs read the key via `requireEnv('CMC_API_KEY')`.
-- Fixtures were recorded live (2026-10-06) and trimmed. `gainers-losers.success.json` is hand-built from CMC's docs. Re-record them when a provider spec flags drift and the schema is updated.
+- Fixtures were recorded live (2026-10-06; the v3 quotes/latest ones 2026-10-13) and trimmed. `gainers-losers.success.json` is hand-built from CMC's docs. Re-record them when a provider spec flags drift and the schema is updated.
 - Known quirks the schemas encode:
   - `status.error_code` is a number on quotes/latest and gainers-losers, but a numeric string on simple/price.
   - quotes/latest returns every coin sharing a symbol, and only the first (canonical) entry is guaranteed a non-null price.

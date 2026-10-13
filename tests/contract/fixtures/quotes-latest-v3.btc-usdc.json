@@ -1,0 +1,97 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Bitcoin",
+      "symbol": "BTC",
+      "slug": "bitcoin",
+      "num_market_pairs": 12763,
+      "cmc_rank": 1,
+      "date_added": "2010-07-13T00:00:00.000Z",
+      "tags": [
+        {
+          "slug": "mineable",
+          "name": "Mineable",
+          "category": "OTHERS"
+        },
+        {
+          "slug": "pow",
+          "name": "PoW",
+          "category": "ALGORITHM"
+        }
+      ],
+      "platform": null,
+      "max_supply": 21000000,
+      "circulating_supply": 20097596,
+      "total_supply": 20097596,
+      "is_active": 1,
+      "is_fiat": 0,
+      "quote": [
+        {
+          "id": 2781,
+          "symbol": "USD",
+          "price": 83251.8640499167,
+          "market_cap": 1673162329922.1497,
+          "volume_24h": 31589307786.982925,
+          "percent_change_1h": -0.03319185,
+          "percent_change_24h": 0.46229299,
+          "percent_change_7d": -3.49200064,
+          "last_updated": "2026-10-13T12:52:05.000Z"
+        }
+      ]
+    },
+    {
+      "id": 3408,
+      "name": "USDC",
+      "symbol": "USDC",
+      "slug": "usd-coin",
+      "num_market_pairs": 46404,
+      "cmc_rank": 6,
+      "date_added": "2018-10-08T00:00:00.000Z",
+      "tags": [
+        {
+          "slug": "medium-of-exchange",
+          "name": "Medium of Exchange",
+          "category": "INDUSTRY"
+        },
+        {
+          "slug": "stablecoin",
+          "name": "Stablecoin",
+          "category": "CATEGORY"
+        }
+      ],
+      "platform": {
+        "id": 24091,
+        "slug": "zksync",
+        "name": "zkSync Era",
+        "symbol": "ZK",
+        "token_address": "0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4"
+      },
+      "max_supply": null,
+      "circulating_supply": 72786127666.09265,
+      "total_supply": 72786127666.09265,
+      "is_active": 1,
+      "is_fiat": 0,
+      "quote": [
+        {
+          "id": 2781,
+          "symbol": "USD",
+          "price": 0.9998539779531128,
+          "market_cap": 72775499286.74585,
+          "volume_24h": 17764031876.519463,
+          "percent_change_1h": -0.00320449,
+          "percent_change_24h": -0.00217396,
+          "percent_change_7d": -0.00353426,
+          "last_updated": "2026-10-13T12:52:05.000Z"
+        }
+      ]
+    }
+  ],
+  "status": {
+    "timestamp": "2026-10-13T12:53:38.746Z",
+    "error_code": "0",
+    "error_message": "",
+    "elapsed": 3,
+    "credit_count": 1
+  }
+}

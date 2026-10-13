@@ -12,7 +12,7 @@ const suite = process.env.ALLURE_SUITE || 'adhoc'
 const minTestsCount = {
   'btc-price': 1,
   api: 50,
-  contract: 25,
+  contract: 33,
   navigation: 11,
   // One result per k6 threshold.
   perf: 7,
