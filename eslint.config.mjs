@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint'
 import playwright from 'eslint-plugin-playwright'
 
 export default defineConfig(
-  { ignores: ['node_modules/', 'playwright-report/', 'test-results/', 'data/', '.agents/*/models/'] },
+  { ignores: ['node_modules/', '.node_modules.nosync/', 'playwright-report/', 'test-results/', 'data/', '.agents/*/models/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

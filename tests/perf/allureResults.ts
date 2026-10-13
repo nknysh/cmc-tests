@@ -44,6 +44,13 @@ const parseMetricName = (name: string): { metric: string; endpoint?: string } =>
 /** The stat a threshold expression checks, e.g. `p(95)<1500` → `p(95)`, `rate==0` → `rate`. */
 const thresholdStat = (expression: string): string => /^[a-z]+(\(\d+\))?/i.exec(expression)?.[0] ?? expression
 
+/**
+ * Allure severity, which the quality gate in allurerc.mjs tiers failures by. A p99
+ * breach is the noisiest signal, so it is tolerated; every other threshold is critical.
+ * Plain strings, since k6 can't resolve allure-js-commons' Severity enum.
+ */
+const thresholdSeverity = (stat: string): 'critical' | 'normal' => (stat === 'p(99)' ? 'normal' : 'critical')
+
 export function toAllureResults(data: SummaryData, options: AllureResultsOptions): Record<string, string> {
   const stop = Date.now()
   const start = stop - (data.state?.testRunDurationMs ?? 0)
@@ -85,6 +92,7 @@ export function toAllureResults(data: SummaryData, options: AllureResultsOptions
           { name: 'suite', value: options.suite },
           { name: 'feature', value: endpoint ?? 'overall' },
           { name: 'framework', value: 'k6' },
+          { name: 'severity', value: thresholdSeverity(stat) },
         ],
         steps: Object.entries(values).map(([key, value]) => ({
           name: `${key} = ${formatValue(key, value, values)}`,

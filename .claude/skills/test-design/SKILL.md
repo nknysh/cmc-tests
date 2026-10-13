@@ -33,6 +33,7 @@ Read the whole file before designing tests; each section below applies.
 - [One Flat Suite per API Endpoint](#one-flat-suite-per-api-endpoint)
 - [Deterministic Over Flaky](#deterministic-over-flaky)
 - [Name Tests as Specifications](#name-tests-as-specifications)
+- [Declare a Severity](#declare-a-severity)
 
 ## One Behavior Per Test
 
@@ -218,3 +219,32 @@ A test name should read as a specification of behavior, not a description
 of steps. `"BTC price is above threshold"` tells you what's guaranteed;
 `"test fetchBtcPrice"` doesn't. Favor the former — it's what shows up in
 CI failure output and the HTML report.
+
+## Declare a Severity
+
+Every test declares an Allure severity: how bad it is when *this* test
+fails. Use the `severity()` annotation from `tests/helpers/severity.ts`,
+either on the test or on its `test.describe` when every test in the group
+shares a level. Never use both on the same test, because that gives it two
+severity labels.
+
+```typescript
+test(
+  'an invalid API key is rejected',
+  { annotation: [{ type: 'test-case-id', description: '20' }, severity(Severity.BLOCKER)] },
+  async () => { /* ... */ },
+)
+```
+
+- **blocker**: the suite's results can't be trusted, e.g. the provider
+  changed its contract, auth is broken, or the BTC price window is breached.
+- **critical**: a core happy path, e.g. resolving an asset by id or slug,
+  a consumer contract mapping, or homepage navigation.
+- **normal**: validation, error envelopes, parameter combinations and edge
+  cases.
+- **minor/trivial**: formatting, rounding, and credit accounting.
+
+The severity decides whether a failure breaks CI. The quality gate in
+`allurerc.mjs` fails on any blocker/critical failure, but tolerates a few
+failures at lower severities. So give tests in suites where any failure
+must stop the pipeline (btc-price, navigation) blocker or critical.

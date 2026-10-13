@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { Severity, severity } from '@tests/helpers/severity'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { CmcErrorResponseSchema, GainersLosersResponseSchema } from '@src/clients/coinmarketcap/schemas'
 import { API_KEY_HEADER, CMC_BASE_URL, DUMMY_API_KEY } from '../helpers/constants'
@@ -20,7 +21,7 @@ const START = 1
 const LIMIT = 2
 const CURRENCY_USD = 'USD'
 
-test.describe('fetchGainersLosers consumer contract — GET /v1/cryptocurrency/trending/gainers-losers', () => {
+test.describe('fetchGainersLosers consumer contract — GET /v1/cryptocurrency/trending/gainers-losers', { annotation: severity(Severity.CRITICAL) }, () => {
   let stub: FetchStub | undefined
 
   test.afterEach(() => {

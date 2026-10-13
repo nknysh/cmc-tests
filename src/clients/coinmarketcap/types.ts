@@ -3,6 +3,7 @@ import type {
   CmcApiStatusSchema,
   GainersLosersResponseSchema,
   QuoteResponseSchema,
+  QuotesLatestV3ResponseSchema,
   SimplePriceResponseSchema,
 } from './schemas'
 
@@ -20,6 +21,67 @@ export interface CoinMarketCapClientOptions {
 export type CmcApiStatus = z.infer<typeof CmcApiStatusSchema>
 
 export type QuoteResponse = z.infer<typeof QuoteResponseSchema>
+
+export interface QuotesLatestOptions {
+  /** Comma-separated CoinMarketCap IDs (up to 400). Exactly one of id, slug, or symbol is required. */
+  id?: string
+  /** Comma-separated cryptocurrency slugs (e.g. "bitcoin,ethereum"). */
+  slug?: string
+  /** Comma-separated cryptocurrency symbols. Returns every coin sharing a symbol. */
+  symbol?: string
+  /** Comma-separated fiat/crypto symbols to convert into (Basic plan: one). Cannot be combined with convertId. */
+  convert?: string
+  /** Comma-separated CoinMarketCap currency IDs to convert into. Cannot be combined with convert. */
+  convertId?: string
+  /** Comma-separated supplemental fields to return (e.g. "cmc_rank,tags"). API default: a fixed set. */
+  aux?: string
+  /** When false, an unresolvable id in a list fails the whole call. API default behaves as true. */
+  skipInvalid?: boolean
+}
+
+export interface QuotesLatestQuote {
+  /** The conversion currency's symbol (e.g. "USD"). */
+  currency: string
+  /** The conversion currency's CoinMarketCap id (e.g. 2781 for USD). */
+  currencyId: number
+  /** null for inactive coins that share a requested symbol. */
+  price: number | null
+  marketCap: number | null
+  volume24h: number
+  percentChange1h: number
+  percentChange24h: number
+  percentChange7d: number
+  lastUpdated: string
+}
+
+/** Optional fields are aux fields: undefined when the `aux` param didn't request them. */
+export interface QuotesLatestEntry {
+  id: number
+  name: string
+  symbol: string
+  slug: string
+  numMarketPairs?: number
+  cmcRank?: number | null
+  dateAdded?: string
+  /** Tag slugs. */
+  tags?: string[]
+  /** The chain a token is issued on; null for a coin with its own chain. */
+  platform?: { id: number; tokenAddress: string } | null
+  maxSupply?: number | null
+  circulatingSupply?: number | null
+  totalSupply?: number | null
+  isActive?: boolean
+  isFiat?: boolean
+  quotes: QuotesLatestQuote[]
+}
+
+export interface QuotesLatestResult {
+  entries: QuotesLatestEntry[]
+  /** Call credits the API charged for this request (status.credit_count). */
+  creditCount: number
+}
+
+export type QuotesLatestV3Response = z.infer<typeof QuotesLatestV3ResponseSchema>
 
 export interface SimplePriceOptions {
   /** Comma-separated CoinMarketCap IDs. At least one of id, slug, or symbol is required. */

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { Severity, severity } from '@tests/helpers/severity'
 import {
   CmcErrorResponseSchema,
   SimplePriceQuoteIncludeAllSchema,
@@ -20,7 +21,7 @@ const SIMPLE_PRICE_PATH = '/v2/simple/price'
 const CMC_ID_BTC = '1'
 const CURRENCY_USD = 'USD'
 
-test.describe('Simple Price provider contract — GET /v2/simple/price', () => {
+test.describe('Simple Price provider contract — GET /v2/simple/price', { annotation: severity(Severity.BLOCKER) }, () => {
   test('a response without include flags matches the client contract', async ({ request }) => {
     const apiKey = requireEnv('CMC_API_KEY')
 

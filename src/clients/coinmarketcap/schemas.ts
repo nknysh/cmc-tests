@@ -56,6 +56,48 @@ export const QuoteResponseSchema = z.object({
   status: CmcApiStatusSchema,
 })
 
+/**
+ * GET /v3/cryptocurrency/quotes/latest. Unlike v2, `data` is an array and each
+ * item's `quote` is an array with one entry per conversion currency. A symbol
+ * returns every coin sharing it, and inactive collisions carry `price: null`
+ * and `market_cap: null`, so both are nullable for every item. The aux fields
+ * are only present when the `aux` param asks for them (or it's omitted).
+ */
+export const QuotesLatestV3ResponseSchema = z.object({
+  data: z.array(
+    z.object({
+      id: z.number().int(),
+      name: z.string(),
+      symbol: z.string(),
+      slug: z.string(),
+      num_market_pairs: z.number().int().optional(),
+      cmc_rank: z.number().int().nullable().optional(),
+      date_added: z.iso.datetime().optional(),
+      tags: z.array(z.object({ slug: z.string() })).optional(),
+      platform: z.object({ id: z.number().int(), token_address: z.string() }).nullable().optional(),
+      max_supply: z.number().nullable().optional(),
+      circulating_supply: z.number().nullable().optional(),
+      total_supply: z.number().nullable().optional(),
+      is_active: z.number().int().optional(),
+      is_fiat: z.number().int().optional(),
+      quote: z.array(
+        z.object({
+          id: z.number().int(),
+          symbol: z.string(),
+          price: z.number().nullable(),
+          market_cap: z.number().nullable(),
+          volume_24h: z.number(),
+          percent_change_1h: z.number(),
+          percent_change_24h: z.number(),
+          percent_change_7d: z.number(),
+          last_updated: z.iso.datetime(),
+        }),
+      ),
+    }),
+  ),
+  status: CmcApiStatusSchema,
+})
+
 const SimplePriceQuoteSchema = z.object({
   symbol: z.string(),
   price: z.number(),

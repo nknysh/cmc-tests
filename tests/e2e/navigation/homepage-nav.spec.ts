@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { Severity, severity } from '@tests/helpers/severity'
 import { CoinMarketCapHomePage, NavTabIndex } from '@tests/e2e/pages/CoinMarketCapHomePage'
 
 const ALL_TABS: readonly { index: NavTabIndex; label: string }[] = [
@@ -32,7 +33,7 @@ const FULL_PAGE_TABS: readonly { index: NavTabIndex; label: string; expectedPath
   { index: 'tab-bstocks', label: 'bStocks', expectedPath: '/real-world-assets/' },
 ]
 
-test.describe('CoinMarketCap homepage first-level navigation', { tag: '@navigation' }, () => {
+test.describe('CoinMarketCap homepage first-level navigation', { tag: '@navigation', annotation: severity(Severity.CRITICAL) }, () => {
   test('exposes all expected first-level tabs', async ({ page }) => {
     const home = new CoinMarketCapHomePage(page)
     await home.goto()

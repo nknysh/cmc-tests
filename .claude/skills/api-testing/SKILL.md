@@ -164,10 +164,13 @@ API tests live under `tests/api/`, separate from browser E2E specs under
 - Declares any threshold/expected-value constants at the top of the file,
   named and explicit, not inlined into the assertion.
 - Groups each spec's tests in a `test.describe()` with a meaningful name.
+- Declares an Allure severity on every test (see the `test-design` skill's
+  "Declare a Severity").
 - Uses one `test()` per behavior, asserting on the client's domain type:
 
 ```typescript
 import { test, expect } from '@playwright/test'
+import { Severity, severity } from '@tests/helpers/severity'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { readBtcPriceWindow } from '@agents/btc-price-window/btcPriceWindow'
 
@@ -176,7 +179,7 @@ const SYMBOL_BTC = 'BTC'
 const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
 
 test.describe('CoinMarketCap BTC Price', () => {
-  test('BTC price is within expected range', async () => {
+  test('BTC price is within expected range', { annotation: severity(Severity.BLOCKER) }, async () => {
     expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
 
     const client = new CoinMarketCapClient({ apiKey: apiKey! })

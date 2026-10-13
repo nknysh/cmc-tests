@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import * as allure from 'allure-js-commons'
+import { Severity, severity } from '@tests/helpers/severity'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 
 /**
@@ -36,7 +37,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'rejects convert and convertId supplied together',
-      { annotation: { type: 'test-case-id', description: '44' } },
+      { annotation: [{ type: 'test-case-id', description: '44' }, severity(Severity.NORMAL)] },
       async () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })
@@ -49,7 +50,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'an invalid API key is rejected',
-      { annotation: { type: 'test-case-id', description: '47' } },
+      { annotation: [{ type: 'test-case-id', description: '47' }, severity(Severity.BLOCKER)] },
       async () => {
         const client = new CoinMarketCapClient({ apiKey: 'not-a-real-key' })
 
@@ -59,7 +60,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'a key on a plan below Startup is rejected with a plan error',
-      { annotation: { type: 'test-case-id', description: '48' } },
+      { annotation: [{ type: 'test-case-id', description: '48' }, severity(Severity.NORMAL)] },
       async () => {
         expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
         const client = new CoinMarketCapClient({ apiKey: apiKey! })

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { Severity, severity } from '@tests/helpers/severity'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import {
   CmcErrorResponseSchema,
@@ -23,7 +24,7 @@ const CMC_ID_BTC = '1'
 const CURRENCY_ID_USD = '2781'
 const PRECISION = 2
 
-test.describe('fetchSimplePrice consumer contract — GET /v2/simple/price', () => {
+test.describe('fetchSimplePrice consumer contract — GET /v2/simple/price', { annotation: severity(Severity.CRITICAL) }, () => {
   let stub: FetchStub | undefined
 
   test.afterEach(() => {

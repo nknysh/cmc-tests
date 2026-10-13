@@ -9,15 +9,29 @@ const suite = process.env.ALLURE_SUITE || 'adhoc'
 // exits non-zero on a violation; `npm run allure:gate` checks local results. minTestsCount
 // guards against specs silently dropping out of a suite, so bump it when adding tests.
 // Allure excludes retries itself.
-const qualityGateRules = {
-  'btc-price': { maxFailures: 0, minTestsCount: 1 },
-  api: { maxFailures: 0, minTestsCount: 21 },
-  contract: { maxFailures: 0, minTestsCount: 25 },
-  navigation: { maxFailures: 0, minTestsCount: 11 },
+const minTestsCount = {
+  'btc-price': 1,
+  api: 50,
+  contract: 25,
+  navigation: 11,
   // One result per k6 threshold.
-  perf: { maxFailures: 0, minTestsCount: 7 },
+  perf: 7,
 }
-const rules = qualityGateRules[suite]
+
+// Failures are tiered by the tests' Allure severity label (see tests/helpers/severity.ts):
+// any blocker/critical failure fails the gate, while up to MAX_NON_SEVERE_FAILURES failures at
+// normal/minor/trivial are tolerated. A test without a severity label counts as normal, as in Allure.
+const SEVERE_LEVELS = new Set(['blocker', 'critical'])
+const MAX_NON_SEVERE_FAILURES = 2
+const isSevere = (tr) => tr.labels.some(({ name, value }) => name === 'severity' && SEVERE_LEVELS.has(value))
+
+const testsCount = minTestsCount[suite]
+const rules = testsCount && [
+  // Distinct ids, because Allure keys each rule's state by id.
+  { id: 'severe', maxFailures: 0, filter: isSevere },
+  { id: 'non-severe', maxFailures: MAX_NON_SEVERE_FAILURES, filter: (tr) => !isSevere(tr) },
+  { id: 'all', minTestsCount: testsCount },
+]
 
 export default defineConfig({
   name: `CMC Tests — ${suite}`,
@@ -31,5 +45,5 @@ export default defineConfig({
     // where the multi-file report's fetch() calls are blocked by CORS.
     awesome: { options: { singleFile: true } },
   },
-  ...(rules && { qualityGate: { rules: [rules] } }),
+  ...(rules && { qualityGate: { rules } }),
 })

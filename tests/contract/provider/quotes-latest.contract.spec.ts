@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { Severity, severity } from '@tests/helpers/severity'
 import { CmcErrorResponseSchema, QuoteResponseSchema } from '@src/clients/coinmarketcap/schemas'
 import { cmcRawGet } from '../helpers/cmcRawRequest'
 import { ERROR_CODE_INVALID_KEY, INVALID_API_KEY } from '../helpers/constants'
@@ -15,7 +16,7 @@ const QUOTES_LATEST_PATH = '/v2/cryptocurrency/quotes/latest'
 const SYMBOL_BTC = 'BTC'
 const CURRENCY_USD = 'USD'
 
-test.describe('Quotes Latest provider contract — GET /v2/cryptocurrency/quotes/latest', () => {
+test.describe('Quotes Latest provider contract — GET /v2/cryptocurrency/quotes/latest', { annotation: severity(Severity.BLOCKER) }, () => {
   test('a successful response matches the client contract', async ({ request }) => {
     const apiKey = requireEnv('CMC_API_KEY')
 

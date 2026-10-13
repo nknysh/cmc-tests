@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { Severity, severity } from '@tests/helpers/severity'
 import { CmcErrorResponseSchema } from '@src/clients/coinmarketcap/schemas'
 import { cmcRawGet } from '../helpers/cmcRawRequest'
 import { ERROR_CODE_INVALID_KEY, INVALID_API_KEY } from '../helpers/constants'
@@ -18,7 +19,7 @@ const GAINERS_LOSERS_PATH = '/v1/cryptocurrency/trending/gainers-losers'
 const LIMIT = '2'
 const ERROR_CODE_PLAN_NOT_SUPPORTED = 1006
 
-test.describe('Trending Gainers & Losers provider contract — GET /v1/cryptocurrency/trending/gainers-losers', () => {
+test.describe('Trending Gainers & Losers provider contract — GET /v1/cryptocurrency/trending/gainers-losers', { annotation: severity(Severity.BLOCKER) }, () => {
   test('a plan-gated response matches the error contract', async ({ request }) => {
     const apiKey = requireEnv('CMC_API_KEY')
 

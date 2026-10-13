@@ -154,7 +154,9 @@ use: {
 Reporters are `html`, `list` and `allure-playwright` (results under
 `allure-results/<ALLURE_SUITE>/`), plus `json` when
 `PLAYWRIGHT_JSON_OUTPUT_NAME` is set. Add a new browser suite as another
-project rather than a second config file.
+project rather than a second config file. Every test declares an Allure
+severity via `severity()` from `tests/helpers/severity.ts` (the navigation
+suite sets `critical` on its `test.describe`); see the `test-design` skill.
 
 ## Flaky Test Patterns
 

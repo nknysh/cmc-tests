@@ -1,11 +1,14 @@
 import { GainersLosersEndpoint } from './endpoints/GainersLosersEndpoint'
 import { QuotesLatestEndpoint } from './endpoints/QuotesLatestEndpoint'
+import { QuotesLatestV3Endpoint } from './endpoints/QuotesLatestV3Endpoint'
 import { SimplePriceEndpoint } from './endpoints/SimplePriceEndpoint'
 import type {
   CoinMarketCapClientOptions,
   GainersLosersOptions,
   GainersLosersResult,
   Price,
+  QuotesLatestOptions,
+  QuotesLatestResult,
   SimplePriceEntry,
   SimplePriceOptions,
 } from './types'
@@ -20,6 +23,7 @@ const DEFAULT_BASE_URL = 'https://pro-api.coinmarketcap.com'
 export class CoinMarketCapClient {
   private readonly gainersLosers: GainersLosersEndpoint
   private readonly quotesLatest: QuotesLatestEndpoint
+  private readonly quotesLatestV3: QuotesLatestV3Endpoint
   private readonly simplePrice: SimplePriceEndpoint
 
   constructor({ apiKey, baseUrl = DEFAULT_BASE_URL }: CoinMarketCapClientOptions) {
@@ -28,11 +32,16 @@ export class CoinMarketCapClient {
     }
     this.gainersLosers = new GainersLosersEndpoint({ apiKey, baseUrl })
     this.quotesLatest = new QuotesLatestEndpoint({ apiKey, baseUrl })
+    this.quotesLatestV3 = new QuotesLatestV3Endpoint({ apiKey, baseUrl })
     this.simplePrice = new SimplePriceEndpoint({ apiKey, baseUrl })
   }
 
   fetchPrice(symbol: string): Promise<Price> {
     return this.quotesLatest.fetchPrice(symbol)
+  }
+
+  fetchQuotesLatest(options?: QuotesLatestOptions): Promise<QuotesLatestResult> {
+    return this.quotesLatestV3.fetchQuotesLatest(options)
   }
 
   fetchSimplePrice(options: SimplePriceOptions): Promise<SimplePriceEntry[]> {

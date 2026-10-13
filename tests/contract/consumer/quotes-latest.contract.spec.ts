@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { Severity, severity } from '@tests/helpers/severity'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { CmcErrorResponseSchema, QuoteResponseSchema } from '@src/clients/coinmarketcap/schemas'
 import { API_KEY_HEADER, CMC_BASE_URL, DUMMY_API_KEY } from '../helpers/constants'
@@ -17,7 +18,7 @@ const QUOTES_LATEST_URL = `${CMC_BASE_URL}/v2/cryptocurrency/quotes/latest`
 const SYMBOL_BTC = 'BTC'
 const CURRENCY_USD = 'USD'
 
-test.describe('fetchPrice consumer contract — GET /v2/cryptocurrency/quotes/latest', () => {
+test.describe('fetchPrice consumer contract — GET /v2/cryptocurrency/quotes/latest', { annotation: severity(Severity.CRITICAL) }, () => {
   let stub: FetchStub | undefined
 
   test.afterEach(() => {
