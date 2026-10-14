@@ -79,9 +79,17 @@ See `src/clients/coinmarketcap/` as the reference implementation, and `.claude/s
 ### API test pattern (`tests/api/`)
 
 - Imports the client directly — no `page` fixture, so Playwright doesn't launch a browser for these.
-- Reads required env vars and asserts they're present (`expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()`) before constructing the client, so a missing key fails clearly instead of erroring deep inside an API call.
+- Builds the client with `createCmcClient()` (`tests/helpers/cmc.ts`). It asserts `CMC_API_KEY` is set (`'CMC_API_KEY must be set'`), so a missing key fails clearly instead of erroring deep inside an API call, and attaches the shared rate limiter (see Rate limit below).
 - Declares threshold/expected-value constants at the top of the file, named and explicit, rather than inlined into assertions. Exception: `btc-price.spec.ts` reads its min/max bounds from the self-healing window file below instead of hardcoding them, since the bounds are expected to move over time.
 - One `test()` per behavior, asserting on the client's domain type (not the raw response).
+
+#### Rate limit
+
+The Basic key allows 30 req/min across every live call (globalSetup heal, provider contract, api, btc-price). A burst of requests used to fail tests with 429 / `error_code 1008`. Now:
+- `RateLimiter` (`src/clients/coinmarketcap/RateLimiter.ts`) spaces calls evenly (no bursts) and, on a 429, waits for CMC's per-minute reset and retries once before returning the 429 to the caller. The client takes it via the optional `rateLimiter` option. Offline consumer specs don't pass one, so they stay instant.
+- `tests/helpers/cmc.ts` holds one `cmcRateLimiter` per process (25 req/min, override with `CMC_REQUESTS_PER_MINUTE`), shared by `createCmcClient()` and the provider contract helper `cmcRawGet()`. Never call `new CoinMarketCapClient` in a live spec.
+- The `api`, `contract` and `btc-price` projects run with `workers: 1` and a 90s test timeout, so one limiter paces the whole run and a wait for the reset fits in the timeout.
+- The suite can keep growing, at about 2.4s per live request. To keep it fast, share one memoized call among tests that assert on the same response (`fullIdRangeEntries()` in `quotes-latest.spec.ts`), and put checks that don't need live data in offline consumer contract specs.
 
 ### Contract tests (`tests/contract/`)
 

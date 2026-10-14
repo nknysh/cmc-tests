@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import * as allure from 'allure-js-commons'
 import { Severity, severity } from '@tests/helpers/severity'
-import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
+import { createCmcClient } from '@tests/helpers/cmc'
 
 /**
  * Test cases for GET /v1/cryptocurrency/trending/gainers-losers. Each test is
@@ -20,8 +20,6 @@ import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
  *   constructor requires a truthy apiKey and always sends whatever it's given.
  */
 
-const apiKey = process.env.CMC_API_KEY
-
 const CURRENCY_USD = 'USD'
 const CURRENCY_ID_USD = '2781'
 
@@ -39,8 +37,7 @@ test.describe('CoinMarketCap API', () => {
       'rejects convert and convertId supplied together',
       { annotation: [{ type: 'test-case-id', description: '44' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(
           client.fetchGainersLosers({ convert: CURRENCY_USD, convertId: CURRENCY_ID_USD }),
@@ -52,7 +49,7 @@ test.describe('CoinMarketCap API', () => {
       'an invalid API key is rejected',
       { annotation: [{ type: 'test-case-id', description: '47' }, severity(Severity.BLOCKER)] },
       async () => {
-        const client = new CoinMarketCapClient({ apiKey: 'not-a-real-key' })
+        const client = createCmcClient('not-a-real-key')
 
         await expect(client.fetchGainersLosers()).rejects.toThrow(/401.*error_code 1001/)
       },
@@ -62,8 +59,7 @@ test.describe('CoinMarketCap API', () => {
       'a key on a plan below Startup is rejected with a plan error',
       { annotation: [{ type: 'test-case-id', description: '48' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchGainersLosers({ limit: 2 })).rejects.toThrow(/403.*error_code 1006/)
       },

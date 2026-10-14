@@ -1,4 +1,5 @@
 export { CoinMarketCapClient } from './CoinMarketCapClient'
+export { RateLimiter, type RateLimiterOptions } from './RateLimiter'
 export type {
   CoinMarketCapClientOptions,
   GainersLosersEntry,

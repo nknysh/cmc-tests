@@ -5,6 +5,8 @@ import 'dotenv/config'
 // one suite's report never shows another's results. Unset → an 'adhoc' bucket.
 const allureSuite = process.env.ALLURE_SUITE || 'adhoc'
 
+const liveCmcProject = { workers: 1, timeout: 90_000 }
+
 export default defineConfig({
   globalSetup: './.agents/btc-price-window/self-heal-btc-price-window.ts',
   fullyParallel: true,
@@ -35,9 +37,12 @@ export default defineConfig({
     navigationTimeout: 30000,
   },
   projects: [
-    { name: 'api', testDir: './tests/api', testIgnore: '**/btc-price.spec.ts' },
-    { name: 'contract', testDir: './tests/contract' },
-    { name: 'btc-price', testDir: './tests/api', testMatch: '**/btc-price.spec.ts' },
+    // Live CMC projects run on one worker so all their calls share one rate
+    // limiter (tests/helpers/cmc.ts). The longer timeout covers a wait for
+    // CMC's per-minute reset after a 429.
+    { name: 'api', testDir: './tests/api', testIgnore: '**/btc-price.spec.ts', ...liveCmcProject },
+    { name: 'contract', testDir: './tests/contract', ...liveCmcProject },
+    { name: 'btc-price', testDir: './tests/api', testMatch: '**/btc-price.spec.ts', ...liveCmcProject },
     { name: 'e2e', testDir: './tests/e2e', use: { ...devices['Desktop Chrome'] } },
   ],
 })

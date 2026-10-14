@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test'
 import * as allure from 'allure-js-commons'
 import { Severity, severity } from '@tests/helpers/severity'
-import { CoinMarketCapClient, type QuotesLatestEntry } from '@src/clients/coinmarketcap'
+import type { QuotesLatestEntry } from '@src/clients/coinmarketcap'
+import { createCmcClient } from '@tests/helpers/cmc'
 
 /**
  * Test cases for GET /v3/cryptocurrency/quotes/latest. Each test is mapped to
@@ -23,8 +24,6 @@ import { CoinMarketCapClient, type QuotesLatestEntry } from '@src/clients/coinma
  * - TC-32 (a rejected request costs no credits) isn't testable here, because a
  *   non-OK response throws and creditCount is only returned on success.
  */
-
-const apiKey = process.env.CMC_API_KEY
 
 const CMC_ID_BTC = 1
 const CMC_ID_ETH = 1027
@@ -94,8 +93,7 @@ let fullIdRangeCall: Promise<readonly QuotesLatestEntry[]> | undefined
  * rather than reusing a failure.
  */
 function fullIdRangeEntries(): Promise<readonly QuotesLatestEntry[]> {
-  expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-  fullIdRangeCall ??= new CoinMarketCapClient({ apiKey: apiKey! })
+  fullIdRangeCall ??= createCmcClient()
     .fetchQuotesLatest({ id: idRange(MAX_IDS_PER_CALL) })
     .then(({ entries }) => entries)
   return fullIdRangeCall
@@ -136,8 +134,7 @@ test.describe('CoinMarketCap API', () => {
       'resolves a known asset by id',
       { annotation: [{ type: 'test-case-id', description: '52' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
 
@@ -151,8 +148,7 @@ test.describe('CoinMarketCap API', () => {
       'resolves a known asset by slug',
       { annotation: [{ type: 'test-case-id', description: '53' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ slug: SLUG_BITCOIN })
 
@@ -164,8 +160,7 @@ test.describe('CoinMarketCap API', () => {
       'symbol returns every asset sharing that ticker',
       { annotation: [{ type: 'test-case-id', description: '54' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ symbol: SYMBOL_BTC })
 
@@ -180,8 +175,7 @@ test.describe('CoinMarketCap API', () => {
       'symbol lookup is case-insensitive',
       { annotation: [{ type: 'test-case-id', description: '55' }, severity(Severity.MINOR)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ symbol: SYMBOL_BTC.toLowerCase() })
 
@@ -194,8 +188,7 @@ test.describe('CoinMarketCap API', () => {
       'resolves multiple comma-separated ids in one call',
       { annotation: [{ type: 'test-case-id', description: '56' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: `${CMC_ID_BTC},${CMC_ID_ETH}` })
 
@@ -207,8 +200,7 @@ test.describe('CoinMarketCap API', () => {
       'resolves multiple comma-separated slugs in one call',
       { annotation: [{ type: 'test-case-id', description: '57' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ slug: `${SLUG_BITCOIN},${SLUG_ETHEREUM}` })
 
@@ -220,8 +212,7 @@ test.describe('CoinMarketCap API', () => {
       'rejects a request with no identifier param',
       { annotation: [{ type: 'test-case-id', description: '58' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest()).rejects.toThrow(ERROR_NO_IDENTIFIER)
       },
@@ -231,8 +222,7 @@ test.describe('CoinMarketCap API', () => {
       'rejects id and symbol supplied together',
       { annotation: [{ type: 'test-case-id', description: '59' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: String(CMC_ID_ETH), symbol: SYMBOL_BTC })).rejects.toThrow(
           ERROR_EXCLUSIVE_IDENTIFIERS,
@@ -244,8 +234,7 @@ test.describe('CoinMarketCap API', () => {
       'an unknown id on its own is rejected',
       { annotation: [{ type: 'test-case-id', description: '60' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: String(CMC_ID_NONEXISTENT) })).rejects.toThrow(ERROR_UNKNOWN_ID)
       },
@@ -255,8 +244,7 @@ test.describe('CoinMarketCap API', () => {
       'an unknown slug is rejected',
       { annotation: [{ type: 'test-case-id', description: '61' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ slug: SLUG_NONEXISTENT })).rejects.toThrow(ERROR_UNKNOWN_SLUG)
       },
@@ -266,8 +254,7 @@ test.describe('CoinMarketCap API', () => {
       'an unknown symbol returns an empty result, not an error',
       { annotation: [{ type: 'test-case-id', description: '62' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const result = await client.fetchQuotesLatest({ symbol: SYMBOL_NONEXISTENT })
 
@@ -279,8 +266,7 @@ test.describe('CoinMarketCap API', () => {
       'unresolvable ids in a list are dropped by default',
       { annotation: [{ type: 'test-case-id', description: '63' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: `${CMC_ID_BTC},${CMC_ID_NONEXISTENT}` })
 
@@ -292,8 +278,7 @@ test.describe('CoinMarketCap API', () => {
       'skipInvalid=false rejects a list with an unresolvable id',
       { annotation: [{ type: 'test-case-id', description: '64' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(
           client.fetchQuotesLatest({ id: `${CMC_ID_BTC},${CMC_ID_NONEXISTENT}`, skipInvalid: false }),
@@ -316,8 +301,7 @@ test.describe('CoinMarketCap API', () => {
       `a list of ${MAX_IDS_PER_CALL + 1} ids is rejected`,
       { annotation: [{ type: 'test-case-id', description: '66' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: idRange(MAX_IDS_PER_CALL + 1) })).rejects.toThrow(
           ERROR_TOO_MANY_IDS,
@@ -329,8 +313,7 @@ test.describe('CoinMarketCap API', () => {
       'no convert returns a single USD quote',
       { annotation: [{ type: 'test-case-id', description: '67' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
         const entry = onlyEntry(entries)
@@ -344,8 +327,7 @@ test.describe('CoinMarketCap API', () => {
       'convert to a fiat currency returns a quote in that currency',
       { annotation: [{ type: 'test-case-id', description: '68' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convert: CURRENCY_EUR })
         const entry = onlyEntry(entries)
@@ -359,8 +341,7 @@ test.describe('CoinMarketCap API', () => {
       'convert to a cryptocurrency returns a quote in that crypto',
       { annotation: [{ type: 'test-case-id', description: '69' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_ETH), convert: SYMBOL_BTC })
         const entry = onlyEntry(entries)
@@ -374,8 +355,7 @@ test.describe('CoinMarketCap API', () => {
       'convertId resolves a quote in the requested currency',
       { annotation: [{ type: 'test-case-id', description: '70' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convertId: String(CURRENCY_ID_EUR) })
         const entry = onlyEntry(entries)
@@ -389,8 +369,7 @@ test.describe('CoinMarketCap API', () => {
       'convert and convertId together are rejected',
       { annotation: [{ type: 'test-case-id', description: '71' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(
           client.fetchQuotesLatest({
@@ -406,8 +385,7 @@ test.describe('CoinMarketCap API', () => {
       'an unknown convert currency is rejected',
       { annotation: [{ type: 'test-case-id', description: '72' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convert: CURRENCY_UNKNOWN })).rejects.toThrow(
           ERROR_UNKNOWN_CONVERT,
@@ -419,8 +397,7 @@ test.describe('CoinMarketCap API', () => {
       'Basic plan rejects more than one convert currency',
       { annotation: [{ type: 'test-case-id', description: '73' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(
           client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convert: `${CURRENCY_USD},${CURRENCY_EUR}` }),
@@ -432,8 +409,7 @@ test.describe('CoinMarketCap API', () => {
       'no aux returns the default supplemental fields',
       { annotation: [{ type: 'test-case-id', description: '74' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
         const entry = onlyEntry(entries)
@@ -447,8 +423,7 @@ test.describe('CoinMarketCap API', () => {
       'aux limits supplemental fields to those requested',
       { annotation: [{ type: 'test-case-id', description: '75' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC), aux: AUX_CMC_RANK })
         const entry = onlyEntry(entries)
@@ -463,8 +438,7 @@ test.describe('CoinMarketCap API', () => {
       'an unknown aux value is rejected',
       { annotation: [{ type: 'test-case-id', description: '76' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: String(CMC_ID_BTC), aux: AUX_UNKNOWN })).rejects.toThrow(
           ERROR_UNKNOWN_AUX,
@@ -476,8 +450,7 @@ test.describe('CoinMarketCap API', () => {
       'a quote carries price, market and percent-change metrics',
       { annotation: [{ type: 'test-case-id', description: '77' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
         const entry = onlyEntry(entries)
@@ -501,7 +474,7 @@ test.describe('CoinMarketCap API', () => {
       'an invalid API key is rejected',
       { annotation: [{ type: 'test-case-id', description: '79' }, severity(Severity.BLOCKER)] },
       async () => {
-        const client = new CoinMarketCapClient({ apiKey: 'not-a-real-key' })
+        const client = createCmcClient('not-a-real-key')
 
         await expect(client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })).rejects.toThrow(ERROR_INVALID_API_KEY)
       },
@@ -511,8 +484,7 @@ test.describe('CoinMarketCap API', () => {
       `creditCount is 1 for up to ${RESULTS_PER_CREDIT} results`,
       { annotation: [{ type: 'test-case-id', description: '81' }, severity(Severity.MINOR)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
         const ids = await resolvableIds(RESULTS_PER_CREDIT)
 
         const result = await client.fetchQuotesLatest({ id: ids })
@@ -526,8 +498,7 @@ test.describe('CoinMarketCap API', () => {
       `creditCount rounds up past ${RESULTS_PER_CREDIT} results`,
       { annotation: [{ type: 'test-case-id', description: '82' }, severity(Severity.MINOR)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
         const ids = await resolvableIds(RESULTS_PER_CREDIT + 1)
 
         const result = await client.fetchQuotesLatest({ id: ids })

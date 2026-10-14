@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import * as allure from 'allure-js-commons'
 import { Severity, severity } from '@tests/helpers/severity'
-import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
+import { createCmcClient } from '@tests/helpers/cmc'
 
 /**
  * Test cases for GET /v2/simple/price. Each test is mapped to its source
@@ -21,8 +21,6 @@ import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
  * - TC-24 (rate limit) deliberately trips a real quota limit; left for a
  *   separate opt-in decision rather than running on every CI pass.
  */
-
-const apiKey = process.env.CMC_API_KEY
 
 const CMC_ID_BTC = '1'
 const CMC_ID_ETH = '1027'
@@ -47,8 +45,7 @@ test.describe('CoinMarketCap API', () => {
       'resolves a known asset by id',
       { annotation: [{ type: 'test-case-id', description: '1' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })
 
@@ -64,8 +61,7 @@ test.describe('CoinMarketCap API', () => {
       'resolves a known asset by slug',
       { annotation: [{ type: 'test-case-id', description: '2' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ slug: SLUG_BITCOIN, convert: CURRENCY_USD })
 
@@ -77,8 +73,7 @@ test.describe('CoinMarketCap API', () => {
       'resolves a known asset by symbol',
       { annotation: [{ type: 'test-case-id', description: '3' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ symbol: SYMBOL_BTC, convert: CURRENCY_USD })
 
@@ -90,8 +85,7 @@ test.describe('CoinMarketCap API', () => {
       'resolves multiple comma-separated ids in one call',
       { annotation: [{ type: 'test-case-id', description: '4' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const result = await client.fetchSimplePrice({
           id: `${CMC_ID_BTC},${CMC_ID_ETH}`,
@@ -109,8 +103,7 @@ test.describe('CoinMarketCap API', () => {
       'rejects a request with no identifier param',
       { annotation: [{ type: 'test-case-id', description: '5' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(client.fetchSimplePrice({ convert: CURRENCY_USD })).rejects.toThrow(
           /requires one of id, slug, or symbol/,
@@ -122,8 +115,7 @@ test.describe('CoinMarketCap API', () => {
       'an unresolvable id returns an empty result rather than failing',
       { annotation: [{ type: 'test-case-id', description: '6' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const result = await client.fetchSimplePrice({ id: CMC_ID_NONEXISTENT, convert: CURRENCY_USD })
 
@@ -135,8 +127,7 @@ test.describe('CoinMarketCap API', () => {
       'skip_invalid drops unresolvable ids instead of failing the whole call',
       { annotation: [{ type: 'test-case-id', description: '7' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const result = await client.fetchSimplePrice({
           id: `${CMC_ID_BTC},${CMC_ID_NONEXISTENT}`,
@@ -153,8 +144,7 @@ test.describe('CoinMarketCap API', () => {
       'single convert currency returns one quote entry',
       { annotation: [{ type: 'test-case-id', description: '9' }, severity(Severity.CRITICAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })
 
@@ -168,8 +158,7 @@ test.describe('CoinMarketCap API', () => {
       'multiple convert currencies return one entry per currency',
       { annotation: [{ type: 'test-case-id', description: '10' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({
           id: CMC_ID_BTC,
@@ -187,8 +176,7 @@ test.describe('CoinMarketCap API', () => {
       'convertId resolves a quote in the requested currency',
       { annotation: [{ type: 'test-case-id', description: '11' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convertId: CURRENCY_ID_USD })
 
@@ -205,8 +193,7 @@ test.describe('CoinMarketCap API', () => {
       'rejects convert and convertId supplied together',
       { annotation: [{ type: 'test-case-id', description: '12' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         await expect(
           client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, convertId: CURRENCY_ID_USD }),
@@ -218,8 +205,7 @@ test.describe('CoinMarketCap API', () => {
       'no include flags: response omits all optional fields',
       { annotation: [{ type: 'test-case-id', description: '13' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })
 
@@ -234,8 +220,7 @@ test.describe('CoinMarketCap API', () => {
       'includeAll adds every optional field',
       { annotation: [{ type: 'test-case-id', description: '14' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, includeAll: true })
 
@@ -250,8 +235,7 @@ test.describe('CoinMarketCap API', () => {
       'an individual include flag adds only its own field',
       { annotation: [{ type: 'test-case-id', description: '15' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({
           id: CMC_ID_BTC,
@@ -270,8 +254,7 @@ test.describe('CoinMarketCap API', () => {
       'includeAll overrides an explicit includeMarketCap=false',
       { annotation: [{ type: 'test-case-id', description: '16' }, severity(Severity.NORMAL)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({
           id: CMC_ID_BTC,
@@ -288,8 +271,7 @@ test.describe('CoinMarketCap API', () => {
       'precision rounds returned numeric values',
       { annotation: [{ type: 'test-case-id', description: '17' }, severity(Severity.MINOR)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, precision: 2 })
 
@@ -302,8 +284,7 @@ test.describe('CoinMarketCap API', () => {
       'precision=0 rounds price to a whole number',
       { annotation: [{ type: 'test-case-id', description: '18' }, severity(Severity.MINOR)] },
       async () => {
-        expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-        const client = new CoinMarketCapClient({ apiKey: apiKey! })
+        const client = createCmcClient()
 
         const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, precision: 0 })
 
@@ -315,7 +296,7 @@ test.describe('CoinMarketCap API', () => {
       'an invalid API key is rejected',
       { annotation: [{ type: 'test-case-id', description: '20' }, severity(Severity.BLOCKER)] },
       async () => {
-        const client = new CoinMarketCapClient({ apiKey: 'not-a-real-key' })
+        const client = createCmcClient('not-a-real-key')
 
         await expect(client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })).rejects.toThrow(/401/)
       },

@@ -1,6 +1,8 @@
+import type { RateLimiter } from '../RateLimiter'
 import type { CmcApiStatus } from '../types'
 
 const API_KEY_HEADER = 'X-CMC_PRO_API_KEY'
+const HTTP_TOO_MANY_REQUESTS = 429
 
 /** Formats CMC's `status.error_code`/`error_message` for an error body, or '' if the body isn't a CMC status. */
 function describeApiError(responseText: string): string {
@@ -15,6 +17,7 @@ function describeApiError(responseText: string): string {
 export interface EndpointOptions {
   apiKey: string
   baseUrl: string
+  rateLimiter?: RateLimiter
 }
 
 /**
@@ -26,10 +29,12 @@ export interface EndpointOptions {
 export abstract class BaseEndpoint {
   private readonly apiKey: string
   protected readonly baseUrl: string
+  private readonly rateLimiter?: RateLimiter
 
-  constructor({ apiKey, baseUrl }: EndpointOptions) {
+  constructor({ apiKey, baseUrl, rateLimiter }: EndpointOptions) {
     this.apiKey = apiKey
     this.baseUrl = baseUrl
+    this.rateLimiter = rateLimiter
   }
 
   protected async request(path: string, params: Record<string, string | undefined>): Promise<string> {
@@ -49,7 +54,10 @@ export abstract class BaseEndpoint {
       headers: { ...headers, [API_KEY_HEADER]: '[redacted]' },
     })
 
-    const response = await fetch(url, { headers })
+    const send = () => fetch(url, { headers })
+    const response = this.rateLimiter
+      ? await this.rateLimiter.run(send, (res) => res.status === HTTP_TOO_MANY_REQUESTS)
+      : await send()
     const responseText = await response.text()
 
     console.log(`[${this.constructor.name}] response`, {

@@ -26,14 +26,14 @@ export class CoinMarketCapClient {
   private readonly quotesLatestV3: QuotesLatestV3Endpoint
   private readonly simplePrice: SimplePriceEndpoint
 
-  constructor({ apiKey, baseUrl = DEFAULT_BASE_URL }: CoinMarketCapClientOptions) {
+  constructor({ apiKey, baseUrl = DEFAULT_BASE_URL, rateLimiter }: CoinMarketCapClientOptions) {
     if (!apiKey) {
       throw new Error('CoinMarketCapClient requires an apiKey')
     }
-    this.gainersLosers = new GainersLosersEndpoint({ apiKey, baseUrl })
-    this.quotesLatest = new QuotesLatestEndpoint({ apiKey, baseUrl })
-    this.quotesLatestV3 = new QuotesLatestV3Endpoint({ apiKey, baseUrl })
-    this.simplePrice = new SimplePriceEndpoint({ apiKey, baseUrl })
+    this.gainersLosers = new GainersLosersEndpoint({ apiKey, baseUrl, rateLimiter })
+    this.quotesLatest = new QuotesLatestEndpoint({ apiKey, baseUrl, rateLimiter })
+    this.quotesLatestV3 = new QuotesLatestV3Endpoint({ apiKey, baseUrl, rateLimiter })
+    this.simplePrice = new SimplePriceEndpoint({ apiKey, baseUrl, rateLimiter })
   }
 
   fetchPrice(symbol: string): Promise<Price> {

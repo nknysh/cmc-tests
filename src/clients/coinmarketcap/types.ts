@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import type { RateLimiter } from './RateLimiter'
 import type {
   CmcApiStatusSchema,
   GainersLosersResponseSchema,
@@ -16,6 +17,8 @@ export interface Price {
 export interface CoinMarketCapClientOptions {
   apiKey: string
   baseUrl?: string
+  /** Paces requests and retries rate-limited ones. Share one instance per API key. */
+  rateLimiter?: RateLimiter
 }
 
 export type CmcApiStatus = z.infer<typeof CmcApiStatusSchema>

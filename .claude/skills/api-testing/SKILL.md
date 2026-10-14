@@ -27,6 +27,7 @@ Read the whole file before writing a client or spec; each section below applies.
 - [Config via Environment Variables](#config-via-environment-variables)
 - [API Spec Structure](#api-spec-structure)
 - [Parameterized Testing](#parameterized-testing)
+- [Rate Limits](#rate-limits)
 - [Self-Healing Value Windows](#self-healing-value-windows)
 
 ## Client Folder Layout
@@ -144,14 +145,10 @@ if (!response.ok) {
   (committed) documenting the variable name.
 - `playwright.config.ts` loads env vars once via `import 'dotenv/config'` at
   the top, so `process.env.X` is populated for every test.
-- Tests read the key from `process.env` and assert it's present before
-  constructing the client, so a missing key fails with a clear message
-  instead of an opaque API error:
-
-```typescript
-const apiKey = process.env.CMC_API_KEY
-expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-```
+- Live specs build the client with `createCmcClient()` from
+  [tests/helpers/cmc.ts](../../../tests/helpers/cmc.ts). It reads
+  `CMC_API_KEY` and asserts it's present before constructing the client, so
+  a missing key fails with a clear message instead of an opaque API error.
 
 ## API Spec Structure
 
@@ -171,18 +168,15 @@ API tests live under `tests/api/`, separate from browser E2E specs under
 ```typescript
 import { test, expect } from '@playwright/test'
 import { Severity, severity } from '@tests/helpers/severity'
-import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
+import { createCmcClient } from '@tests/helpers/cmc'
 import { readBtcPriceWindow } from '@agents/btc-price-window/btcPriceWindow'
 
-const apiKey = process.env.CMC_API_KEY
 const SYMBOL_BTC = 'BTC'
 const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
 
 test.describe('CoinMarketCap BTC Price', () => {
   test('BTC price is within expected range', { annotation: severity(Severity.BLOCKER) }, async () => {
-    expect(apiKey, 'CMC_API_KEY must be set').toBeTruthy()
-
-    const client = new CoinMarketCapClient({ apiKey: apiKey! })
+    const client = createCmcClient()
     const btc = await client.fetchPrice(SYMBOL_BTC)
 
     expect(btc.price).toBeGreaterThan(BTC_PRICE_MIN)
@@ -206,7 +200,7 @@ const SYMBOLS: readonly string[] = ['BTC', 'ETH', 'SOL']
 
 for (const symbol of SYMBOLS) {
   test(`fetches a positive price for ${symbol}`, async () => {
-    const client = new CoinMarketCapClient({ apiKey: apiKey! })
+    const client = createCmcClient()
     const quote = await client.fetchPrice(symbol)
 
     expect(quote.price).toBeGreaterThan(0)
@@ -226,7 +220,7 @@ const CASES: readonly { symbol: string; expectedCurrency: string }[] = [
 
 for (const { symbol, expectedCurrency } of CASES) {
   test(`${symbol} quote is denominated in ${expectedCurrency}`, async () => {
-    const client = new CoinMarketCapClient({ apiKey: apiKey! })
+    const client = createCmcClient()
     const quote = await client.fetchPrice(symbol)
 
     expect(quote.currency).toBe(expectedCurrency)
@@ -244,6 +238,30 @@ Keep the table small and declared as a `const` near the top of the file,
 same as any other threshold constant — if the table grows large enough to
 need its own file, it likely belongs next to the client as fixture data
 rather than inline in the spec.
+
+## Rate Limits
+
+The Basic CMC key allows 30 requests/min, and every live spec (api,
+btc-price, provider contract) draws on that one budget. Without pacing, a
+growing suite sends too many requests within a minute and tests fail with
+HTTP 429 / `error_code 1008`.
+
+- The client accepts an optional `rateLimiter` (`RateLimiter` in
+  `src/clients/coinmarketcap/`). It spaces requests evenly and retries a
+  429 once, after CMC's per-minute reset. `createCmcClient()` passes the
+  shared per-process `cmcRateLimiter`, and `cmcRawGet()` uses it too.
+  Never call `new CoinMarketCapClient(...)` in a live spec.
+- The live projects run on `workers: 1` with a 90s timeout
+  (`playwright.config.ts`), so one limiter covers every call in the run.
+- The default rate is 25 req/min (about 2.4s per live request).
+  `CMC_REQUESTS_PER_MINUTE` overrides it for a higher plan.
+- Keep the call count down: when several tests assert on the same response,
+  share one memoized call per file (see `fullIdRangeEntries()` in
+  `tests/api/quotes-latest.spec.ts`). Put mapping and error-handling checks
+  that don't need live data in offline consumer contract specs, which use
+  no quota.
+- Offline specs that stub `fetch` construct the client without a limiter,
+  so they stay instant.
 
 ## Self-Healing Value Windows
 
