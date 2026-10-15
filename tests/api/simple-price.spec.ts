@@ -1,17 +1,20 @@
 import { test, expect } from '@playwright/test'
-import * as allure from 'allure-js-commons'
 import { Severity, severity } from '@tests/helpers/severity'
+import type { SimplePriceEntry } from '@src/clients/coinmarketcap'
 import { createCmcClient } from '@tests/helpers/cmc'
+import { useTestCaseIds } from '@tests/helpers/testCaseId'
 
 /**
  * Test cases for GET /v2/simple/price. Each test is mapped to its source
- * test case in data/test-cases.db (see src/db/testCases/) via the
- * `test-case-id` annotation, which matches that database's `test_cases.id`.
- * Tests below are ordered by that id. The same id is used as each test's
- * Allure id, testCaseId and historyId, so Allure history survives renames of
- * a test or its suite.
+ * test case in data/test-cases.db via the `test-case-id` annotation (see
+ * useTestCaseIds). Tests below are ordered by that id.
  *
- * Not every seeded test case is automated here:
+ * Some seeded test cases are automated at another level:
+ * - TC-05 (no identifier) and TC-12 (convert with convertId) are rejected by
+ *   the client before any request, so they're offline consumer contract tests.
+ * - TC-20 (invalid API key) is the live provider contract's invalid-key test.
+ *
+ * Not every seeded test case is automated:
  * - TC-08 (ambiguous symbol collision) needs a real colliding symbol example.
  * - TC-19 (missing API key) can't be expressed through this client, since its
  *   constructor requires a truthy apiKey and always sends whatever it's given.
@@ -31,23 +34,38 @@ const CURRENCY_USD = 'USD'
 const CURRENCY_EUR = 'EUR'
 const CURRENCY_ID_USD = '2781'
 
+/** `precision` values checked, each mapped to its own test case. */
+const PRECISION_CASES = [
+  { testCaseId: '17', precision: 2 },
+  { testCaseId: '18', precision: 0 },
+] as const
+
+let btcUsdCall: Promise<readonly SimplePriceEntry[]> | undefined
+
+/**
+ * Entries for `{ id: BTC, convert: USD }`, fetched once per worker and shared
+ * by TC-01, TC-09 and TC-13, which assert on different parts of the same
+ * response. The result is readonly because every caller sees the same array.
+ * A failed test restarts its worker, so a retry makes a fresh call rather
+ * than reusing a failure.
+ */
+function btcUsdEntries(): Promise<readonly SimplePriceEntry[]> {
+  btcUsdCall ??= createCmcClient().fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })
+  return btcUsdCall
+}
+
+/** Digits after the decimal point in a number's default string form. */
+const decimalPlaces = (value: number): number => (value.toString().split('.')[1] ?? '').length
+
 test.describe('CoinMarketCap API', () => {
   test.describe('Simple Price — GET /v2/simple/price', () => {
-    test.beforeEach(async ({}, testInfo) => {
-      const testCaseId = testInfo.annotations.find((a) => a.type === 'test-case-id')?.description
-      expect(testCaseId, 'every test needs a test-case-id annotation').toBeTruthy()
-      await allure.allureId(testCaseId!)
-      await allure.testCaseId(`test-case-${testCaseId}`)
-      await allure.historyId(`test-case-${testCaseId}`)
-    })
+    useTestCaseIds()
 
     test(
       'resolves a known asset by id',
       { annotation: [{ type: 'test-case-id', description: '1' }, severity(Severity.CRITICAL)] },
       async () => {
-        const client = createCmcClient()
-
-        const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })
+        const [entry] = await btcUsdEntries()
 
         expect(entry.id).toBe(Number(CMC_ID_BTC))
         expect(entry.name).toBe('Bitcoin')
@@ -100,18 +118,6 @@ test.describe('CoinMarketCap API', () => {
     )
 
     test(
-      'rejects a request with no identifier param',
-      { annotation: [{ type: 'test-case-id', description: '5' }, severity(Severity.NORMAL)] },
-      async () => {
-        const client = createCmcClient()
-
-        await expect(client.fetchSimplePrice({ convert: CURRENCY_USD })).rejects.toThrow(
-          /requires one of id, slug, or symbol/,
-        )
-      },
-    )
-
-    test(
       'an unresolvable id returns an empty result rather than failing',
       { annotation: [{ type: 'test-case-id', description: '6' }, severity(Severity.NORMAL)] },
       async () => {
@@ -144,9 +150,7 @@ test.describe('CoinMarketCap API', () => {
       'single convert currency returns one quote entry',
       { annotation: [{ type: 'test-case-id', description: '9' }, severity(Severity.CRITICAL)] },
       async () => {
-        const client = createCmcClient()
-
-        const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })
+        const [entry] = await btcUsdEntries()
 
         expect(entry.quotes).toHaveLength(1)
         expect(entry.quotes[0].currency).toBe(CURRENCY_USD)
@@ -190,24 +194,10 @@ test.describe('CoinMarketCap API', () => {
     )
 
     test(
-      'rejects convert and convertId supplied together',
-      { annotation: [{ type: 'test-case-id', description: '12' }, severity(Severity.NORMAL)] },
-      async () => {
-        const client = createCmcClient()
-
-        await expect(
-          client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, convertId: CURRENCY_ID_USD }),
-        ).rejects.toThrow(/cannot accept both convert and convertId/)
-      },
-    )
-
-    test(
       'no include flags: response omits all optional fields',
       { annotation: [{ type: 'test-case-id', description: '13' }, severity(Severity.NORMAL)] },
       async () => {
-        const client = createCmcClient()
-
-        const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })
+        const [entry] = await btcUsdEntries()
 
         expect(entry.quotes[0].marketCap).toBeUndefined()
         expect(entry.quotes[0].volume24h).toBeUndefined()
@@ -267,39 +257,18 @@ test.describe('CoinMarketCap API', () => {
       },
     )
 
-    test(
-      'precision rounds returned numeric values',
-      { annotation: [{ type: 'test-case-id', description: '17' }, severity(Severity.MINOR)] },
-      async () => {
-        const client = createCmcClient()
+    for (const { testCaseId, precision } of PRECISION_CASES) {
+      test(
+        `precision=${precision} rounds price to at most ${precision} decimal places`,
+        { annotation: [{ type: 'test-case-id', description: testCaseId }, severity(Severity.MINOR)] },
+        async () => {
+          const client = createCmcClient()
 
-        const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, precision: 2 })
+          const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, precision })
 
-        const decimalPlaces = (entry.quotes[0].price.toString().split('.')[1] ?? '').length
-        expect(decimalPlaces).toBeLessThanOrEqual(2)
-      },
-    )
-
-    test(
-      'precision=0 rounds price to a whole number',
-      { annotation: [{ type: 'test-case-id', description: '18' }, severity(Severity.MINOR)] },
-      async () => {
-        const client = createCmcClient()
-
-        const [entry] = await client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, precision: 0 })
-
-        expect(Number.isInteger(entry.quotes[0].price)).toBe(true)
-      },
-    )
-
-    test(
-      'an invalid API key is rejected',
-      { annotation: [{ type: 'test-case-id', description: '20' }, severity(Severity.BLOCKER)] },
-      async () => {
-        const client = createCmcClient('not-a-real-key')
-
-        await expect(client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD })).rejects.toThrow(/401/)
-      },
-    )
+          expect(decimalPlaces(entry.quotes[0].price)).toBeLessThanOrEqual(precision)
+        },
+      )
+    }
   })
 })

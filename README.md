@@ -7,7 +7,7 @@ Automated API, contract, performance and end-to-end tests for [CoinMarketCap](ht
 | Report | Link |
 |---|---|
 | Summary of all reports | https://nknysh.github.io/cmc-tests/ |
-| API tests (simple price, gainers & losers) | https://nknysh.github.io/cmc-tests/api/ |
+| API tests (simple price, quotes latest) | https://nknysh.github.io/cmc-tests/api/ |
 | Contract tests | https://nknysh.github.io/cmc-tests/contract/ |
 | BTC price window | https://nknysh.github.io/cmc-tests/btc-price/ |
 | Navigation e2e | https://nknysh.github.io/cmc-tests/navigation/ |
@@ -66,7 +66,7 @@ cp .env.example .env   # then set CMC_API_KEY (CoinMarketCap Pro API key)
 
 ```bash
 npm test                # all specs
-npm run test:api        # API specs (simple price, gainers & losers)
+npm run test:api        # API specs (simple price, quotes latest)
 npm run test:contract   # contract specs (provider specs need CMC_API_KEY)
 npm run test:btc-price  # BTC price window spec
 npm run test:e2e        # browser E2E specs

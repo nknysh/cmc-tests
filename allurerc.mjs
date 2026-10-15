@@ -11,8 +11,8 @@ const suite = process.env.ALLURE_SUITE || 'adhoc'
 // Allure excludes retries itself.
 const minTestsCount = {
   'btc-price': 1,
-  api: 50,
-  contract: 33,
+  api: 43,
+  contract: 36,
   navigation: 11,
   // One result per k6 threshold.
   perf: 7,

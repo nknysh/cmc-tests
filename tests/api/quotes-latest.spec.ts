@@ -1,27 +1,27 @@
 import { test, expect } from '@playwright/test'
-import * as allure from 'allure-js-commons'
 import { Severity, severity } from '@tests/helpers/severity'
 import type { QuotesLatestEntry } from '@src/clients/coinmarketcap'
 import { createCmcClient } from '@tests/helpers/cmc'
+import { useTestCaseIds } from '@tests/helpers/testCaseId'
 
 /**
  * Test cases for GET /v3/cryptocurrency/quotes/latest. Each test is mapped to
- * its source test case in data/test-cases.db (see src/db/testCases/) via the
- * `test-case-id` annotation, which matches that database's `test_cases.id`.
- * Tests below are ordered by that id. The same id is used as each test's
- * Allure id, testCaseId and historyId, so Allure history survives renames of
- * a test or its suite.
+ * its source test case in data/test-cases.db via the `test-case-id`
+ * annotation (see useTestCaseIds). Tests below are ordered by that id.
  *
  * The endpoint is available on the Basic (free) plan: re-verified live on
  * 2026-10-13. TC-22 asserts Basic's one-convert limit and will fail if the key
  * is upgraded.
  *
- * Not every seeded test case is automated here:
- * - TC-27 (missing API key) can't be expressed through this client, since its
+ * TC-79 (invalid API key) is automated as the live provider contract's
+ * invalid-key test, not here.
+ *
+ * Not every seeded test case is automated:
+ * - TC-78 (missing API key) can't be expressed through this client, since its
  *   constructor requires a truthy apiKey and always sends whatever it's given.
- * - TC-29 (keyless /public-api path) isn't supported by this client: it always
+ * - TC-80 (keyless /public-api path) isn't supported by this client: it always
  *   sends the key and resolves the path against the host root.
- * - TC-32 (a rejected request costs no credits) isn't testable here, because a
+ * - TC-83 (a rejected request costs no credits) isn't testable here, because a
  *   non-OK response throws and creditCount is only returned on success.
  */
 
@@ -68,17 +68,28 @@ const FIELDS_EXCLUDED_BY_AUX_CMC_RANK = [
   'isActive',
 ] as const satisfies readonly (keyof QuotesLatestEntry)[]
 
-const ERROR_NO_IDENTIFIER = "'value' must contain at least one of [id, symbol, slug]"
-const ERROR_EXCLUSIVE_IDENTIFIERS = "'value' contains a conflict between exclusive peers [id, symbol, slug, address]"
-const ERROR_UNKNOWN_ID = `No data found for 'id': '${CMC_ID_NONEXISTENT}'`
-const ERROR_UNKNOWN_SLUG = `Invalid value for 'slug': '${SLUG_NONEXISTENT}'`
-const ERROR_INVALID_ID_IN_LIST = `Invalid value for 'id': '${CMC_ID_NONEXISTENT}'`
-const ERROR_TOO_MANY_IDS = `'id' parameter is currently restricted to ${MAX_IDS_PER_CALL}`
-const ERROR_CONVERT_AND_CONVERT_ID = "'convert' must not exist simultaneously with [convert_id]"
-const ERROR_UNKNOWN_CONVERT = `Invalid value for 'convert': '${CURRENCY_UNKNOWN}'`
-const ERROR_BASIC_PLAN_CONVERT_LIMIT = 'Your plan is limited to 1 convert options'
-const ERROR_UNKNOWN_AUX = "'aux' should only include one or more comma-separated values from"
-const ERROR_INVALID_API_KEY = 'error_code 1001: This API Key is invalid.'
+/**
+ * Every rejection below is HTTP 400 with `error_code` 400 (re-verified live on
+ * 2026-10-15), so the code alone can't tell them apart. Each test also matches
+ * a short key phrase from `error_message` rather than the whole sentence,
+ * which survives CMC rewording or requoting the rest of it.
+ */
+const HTTP_BAD_REQUEST = 400
+const ERROR_CODE_BAD_REQUEST = 400
+
+const PHRASE_NO_IDENTIFIER = 'must contain at least one of'
+const PHRASE_EXCLUSIVE_IDENTIFIERS = 'conflict between exclusive peers'
+const PHRASE_UNKNOWN_ID = 'No data found'
+const PHRASE_TOO_MANY_IDS = `restricted to ${MAX_IDS_PER_CALL}`
+const PHRASE_CONVERT_AND_CONVERT_ID = 'must not exist simultaneously'
+const PHRASE_BASIC_PLAN_CONVERT_LIMIT = 'limited to 1 convert'
+const PHRASE_UNKNOWN_AUX = 'should only include'
+
+const escapeRegExp = (text: string): string => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+
+/** Matches the client's error for a CMC bad-request rejection whose message contains `keyPhrase`. */
+const badRequest = (keyPhrase: string): RegExp =>
+  new RegExp(String.raw`\b${HTTP_BAD_REQUEST}\b.*error_code ${ERROR_CODE_BAD_REQUEST}: .*${escapeRegExp(keyPhrase)}`)
 
 /** Comma-separated ids 1..count. Not every id in the range resolves. */
 const idRange = (count: number): string => Array.from({ length: count }, (_, i) => i + 1).join(',')
@@ -111,8 +122,22 @@ async function resolvableIds(count: number): Promise<string> {
     .join(',')
 }
 
+let btcByIdCall: Promise<readonly QuotesLatestEntry[]> | undefined
+
+/**
+ * Entries for `{ id: BTC }`, fetched once per worker and shared by TC-52,
+ * TC-67, TC-74 and TC-77, which assert on different parts of the same
+ * response. Readonly and retried the same way as fullIdRangeEntries().
+ */
+function btcByIdEntries(): Promise<readonly QuotesLatestEntry[]> {
+  btcByIdCall ??= createCmcClient()
+    .fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+    .then(({ entries }) => entries)
+  return btcByIdCall
+}
+
 /** The single entry a one-id lookup returns, failing readably if there isn't exactly one. */
-function onlyEntry(entries: QuotesLatestEntry[]): QuotesLatestEntry {
+function onlyEntry(entries: readonly QuotesLatestEntry[]): QuotesLatestEntry {
   expect(entries, 'a single-id lookup must return exactly one asset').toHaveLength(1)
   return entries[0]
 }
@@ -122,21 +147,13 @@ const quoteCurrencies = (entry: QuotesLatestEntry) =>
 
 test.describe('CoinMarketCap API', () => {
   test.describe('Quotes Latest — GET /v3/cryptocurrency/quotes/latest', () => {
-    test.beforeEach(async ({}, testInfo) => {
-      const testCaseId = testInfo.annotations.find((a) => a.type === 'test-case-id')?.description
-      expect(testCaseId, 'every test needs a test-case-id annotation').toBeTruthy()
-      await allure.allureId(testCaseId!)
-      await allure.testCaseId(`test-case-${testCaseId}`)
-      await allure.historyId(`test-case-${testCaseId}`)
-    })
+    useTestCaseIds()
 
     test(
       'resolves a known asset by id',
       { annotation: [{ type: 'test-case-id', description: '52' }, severity(Severity.CRITICAL)] },
       async () => {
-        const client = createCmcClient()
-
-        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const entries = await btcByIdEntries()
 
         expect(entries.map(({ id, name, symbol, slug }) => ({ id, name, symbol, slug }))).toEqual([
           { id: CMC_ID_BTC, name: 'Bitcoin', symbol: SYMBOL_BTC, slug: SLUG_BITCOIN },
@@ -214,7 +231,7 @@ test.describe('CoinMarketCap API', () => {
       async () => {
         const client = createCmcClient()
 
-        await expect(client.fetchQuotesLatest()).rejects.toThrow(ERROR_NO_IDENTIFIER)
+        await expect(client.fetchQuotesLatest()).rejects.toThrow(badRequest(PHRASE_NO_IDENTIFIER))
       },
     )
 
@@ -225,7 +242,7 @@ test.describe('CoinMarketCap API', () => {
         const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: String(CMC_ID_ETH), symbol: SYMBOL_BTC })).rejects.toThrow(
-          ERROR_EXCLUSIVE_IDENTIFIERS,
+          badRequest(PHRASE_EXCLUSIVE_IDENTIFIERS),
         )
       },
     )
@@ -236,7 +253,7 @@ test.describe('CoinMarketCap API', () => {
       async () => {
         const client = createCmcClient()
 
-        await expect(client.fetchQuotesLatest({ id: String(CMC_ID_NONEXISTENT) })).rejects.toThrow(ERROR_UNKNOWN_ID)
+        await expect(client.fetchQuotesLatest({ id: String(CMC_ID_NONEXISTENT) })).rejects.toThrow(badRequest(PHRASE_UNKNOWN_ID))
       },
     )
 
@@ -246,7 +263,7 @@ test.describe('CoinMarketCap API', () => {
       async () => {
         const client = createCmcClient()
 
-        await expect(client.fetchQuotesLatest({ slug: SLUG_NONEXISTENT })).rejects.toThrow(ERROR_UNKNOWN_SLUG)
+        await expect(client.fetchQuotesLatest({ slug: SLUG_NONEXISTENT })).rejects.toThrow(badRequest(SLUG_NONEXISTENT))
       },
     )
 
@@ -282,7 +299,7 @@ test.describe('CoinMarketCap API', () => {
 
         await expect(
           client.fetchQuotesLatest({ id: `${CMC_ID_BTC},${CMC_ID_NONEXISTENT}`, skipInvalid: false }),
-        ).rejects.toThrow(ERROR_INVALID_ID_IN_LIST)
+        ).rejects.toThrow(badRequest(String(CMC_ID_NONEXISTENT)))
       },
     )
 
@@ -304,7 +321,7 @@ test.describe('CoinMarketCap API', () => {
         const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: idRange(MAX_IDS_PER_CALL + 1) })).rejects.toThrow(
-          ERROR_TOO_MANY_IDS,
+          badRequest(PHRASE_TOO_MANY_IDS),
         )
       },
     )
@@ -313,9 +330,7 @@ test.describe('CoinMarketCap API', () => {
       'no convert returns a single USD quote',
       { annotation: [{ type: 'test-case-id', description: '67' }, severity(Severity.CRITICAL)] },
       async () => {
-        const client = createCmcClient()
-
-        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const entries = await btcByIdEntries()
         const entry = onlyEntry(entries)
 
         expect(quoteCurrencies(entry)).toEqual([{ currency: CURRENCY_USD, currencyId: CURRENCY_ID_USD }])
@@ -377,7 +392,7 @@ test.describe('CoinMarketCap API', () => {
             convert: CURRENCY_USD,
             convertId: String(CURRENCY_ID_USD),
           }),
-        ).rejects.toThrow(ERROR_CONVERT_AND_CONVERT_ID)
+        ).rejects.toThrow(badRequest(PHRASE_CONVERT_AND_CONVERT_ID))
       },
     )
 
@@ -388,7 +403,7 @@ test.describe('CoinMarketCap API', () => {
         const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convert: CURRENCY_UNKNOWN })).rejects.toThrow(
-          ERROR_UNKNOWN_CONVERT,
+          badRequest(CURRENCY_UNKNOWN),
         )
       },
     )
@@ -401,7 +416,7 @@ test.describe('CoinMarketCap API', () => {
 
         await expect(
           client.fetchQuotesLatest({ id: String(CMC_ID_BTC), convert: `${CURRENCY_USD},${CURRENCY_EUR}` }),
-        ).rejects.toThrow(ERROR_BASIC_PLAN_CONVERT_LIMIT)
+        ).rejects.toThrow(badRequest(PHRASE_BASIC_PLAN_CONVERT_LIMIT))
       },
     )
 
@@ -409,9 +424,7 @@ test.describe('CoinMarketCap API', () => {
       'no aux returns the default supplemental fields',
       { annotation: [{ type: 'test-case-id', description: '74' }, severity(Severity.NORMAL)] },
       async () => {
-        const client = createCmcClient()
-
-        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const entries = await btcByIdEntries()
         const entry = onlyEntry(entries)
 
         const missing = DEFAULT_AUX_FIELDS.filter((field) => entry[field] === undefined)
@@ -441,7 +454,7 @@ test.describe('CoinMarketCap API', () => {
         const client = createCmcClient()
 
         await expect(client.fetchQuotesLatest({ id: String(CMC_ID_BTC), aux: AUX_UNKNOWN })).rejects.toThrow(
-          ERROR_UNKNOWN_AUX,
+          badRequest(PHRASE_UNKNOWN_AUX),
         )
       },
     )
@@ -450,9 +463,7 @@ test.describe('CoinMarketCap API', () => {
       'a quote carries price, market and percent-change metrics',
       { annotation: [{ type: 'test-case-id', description: '77' }, severity(Severity.CRITICAL)] },
       async () => {
-        const client = createCmcClient()
-
-        const { entries } = await client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })
+        const entries = await btcByIdEntries()
         const entry = onlyEntry(entries)
         const [quote] = entry.quotes
 
@@ -467,16 +478,6 @@ test.describe('CoinMarketCap API', () => {
           }),
         )
         expect(new Date(quote.lastUpdated).toISOString()).toBe(quote.lastUpdated)
-      },
-    )
-
-    test(
-      'an invalid API key is rejected',
-      { annotation: [{ type: 'test-case-id', description: '79' }, severity(Severity.BLOCKER)] },
-      async () => {
-        const client = createCmcClient('not-a-real-key')
-
-        await expect(client.fetchQuotesLatest({ id: String(CMC_ID_BTC) })).rejects.toThrow(ERROR_INVALID_API_KEY)
       },
     )
 

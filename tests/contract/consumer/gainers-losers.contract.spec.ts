@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { Severity, severity } from '@tests/helpers/severity'
+import { useTestCaseIds } from '@tests/helpers/testCaseId'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import { CmcErrorResponseSchema, GainersLosersResponseSchema } from '@src/clients/coinmarketcap/schemas'
 import { API_KEY_HEADER, CMC_BASE_URL, DUMMY_API_KEY } from '../helpers/constants'
@@ -13,16 +14,21 @@ import planGatedFixture from '../fixtures/error.plan-gated-1006.json'
  * /v1/cryptocurrency/trending/gainers-losers): runs the real client offline
  * against contract-valid fixtures, checking the request it sends and how it
  * maps the response. The success fixture is hand-built from CoinMarketCap's
- * docs, since CMC_API_KEY's Basic plan can't record a live one.
+ * docs, since CMC_API_KEY's Basic plan can't record a live one. TC-44 lives
+ * here rather than in tests/api because the client rejects it before sending
+ * a request.
  */
 
 const GAINERS_LOSERS_URL = `${CMC_BASE_URL}/v1/cryptocurrency/trending/gainers-losers`
 const START = 1
 const LIMIT = 2
 const CURRENCY_USD = 'USD'
+const CURRENCY_ID_USD = '2781'
 
 test.describe('fetchGainersLosers consumer contract — GET /v1/cryptocurrency/trending/gainers-losers', { annotation: severity(Severity.CRITICAL) }, () => {
   let stub: FetchStub | undefined
+
+  useTestCaseIds({ required: false })
 
   test.afterEach(() => {
     stub?.restore()
@@ -98,6 +104,20 @@ test.describe('fetchGainersLosers consumer contract — GET /v1/cryptocurrency/t
 
     expect(creditCount).toBe(successFixture.status.credit_count)
   })
+
+  test(
+    'rejects convert and convertId supplied together without sending it',
+    { annotation: { type: 'test-case-id', description: '44' } },
+    async () => {
+      stub = stubFetch(200, successFixture)
+      const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
+
+      await expect(client.fetchGainersLosers({ convert: CURRENCY_USD, convertId: CURRENCY_ID_USD })).rejects.toThrow(
+        /cannot accept both convert and convertId/,
+      )
+      expect(stub.requests).toEqual([])
+    },
+  )
 
   test('surfaces the status and error code from a plan-gated envelope', async () => {
     stub = stubFetch(403, planGatedFixture)

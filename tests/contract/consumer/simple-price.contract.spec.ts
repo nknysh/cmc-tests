@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { Severity, severity } from '@tests/helpers/severity'
+import { useTestCaseIds } from '@tests/helpers/testCaseId'
 import { CoinMarketCapClient } from '@src/clients/coinmarketcap'
 import {
   CmcErrorResponseSchema,
@@ -16,16 +17,21 @@ import invalidKeyFixture from '../fixtures/error.invalid-key-1001.simple-price.j
 /**
  * Consumer contract for fetchSimplePrice (GET /v2/simple/price): runs the
  * real client offline against contract-valid fixtures, checking the request
- * it sends and how it maps the response. No network, no API key.
+ * it sends and how it maps the response. No network, no API key. TC-05 and
+ * TC-12 live here rather than in tests/api because the client rejects them
+ * before sending a request.
  */
 
 const SIMPLE_PRICE_URL = `${CMC_BASE_URL}/v2/simple/price`
 const CMC_ID_BTC = '1'
+const CURRENCY_USD = 'USD'
 const CURRENCY_ID_USD = '2781'
 const PRECISION = 2
 
 test.describe('fetchSimplePrice consumer contract — GET /v2/simple/price', { annotation: severity(Severity.CRITICAL) }, () => {
   let stub: FetchStub | undefined
+
+  useTestCaseIds({ required: false })
 
   test.afterEach(() => {
     stub?.restore()
@@ -106,6 +112,34 @@ test.describe('fetchSimplePrice consumer contract — GET /v2/simple/price', { a
       },
     ])
   })
+
+  test(
+    'rejects a request with no identifier param without sending it',
+    { annotation: { type: 'test-case-id', description: '5' } },
+    async () => {
+      stub = stubFetch(200, minimalFixture)
+      const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
+
+      await expect(client.fetchSimplePrice({ convert: CURRENCY_USD })).rejects.toThrow(
+        /requires one of id, slug, or symbol/,
+      )
+      expect(stub.requests).toEqual([])
+    },
+  )
+
+  test(
+    'rejects convert and convertId supplied together without sending it',
+    { annotation: { type: 'test-case-id', description: '12' } },
+    async () => {
+      stub = stubFetch(200, minimalFixture)
+      const client = new CoinMarketCapClient({ apiKey: DUMMY_API_KEY })
+
+      await expect(
+        client.fetchSimplePrice({ id: CMC_ID_BTC, convert: CURRENCY_USD, convertId: CURRENCY_ID_USD }),
+      ).rejects.toThrow(/cannot accept both convert and convertId/)
+      expect(stub.requests).toEqual([])
+    },
+  )
 
   test('surfaces the status and a string error code from an error envelope', async () => {
     stub = stubFetch(401, invalidKeyFixture)
