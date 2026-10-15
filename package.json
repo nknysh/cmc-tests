@@ -25,6 +25,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "viewer": "tsx src/web/testCaseViewer/server.ts",
+    "snapshot": "tsx scripts/snapshot-listings.ts",
     "code-review": "node .agents/code-review-hook/PreCommitCodeReviewHook.mts",
     "prepare": "husky"
   },

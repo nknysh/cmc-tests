@@ -1,0 +1,72 @@
+name: CoinBoard App
+
+# Builds the CoinBoard demo app (app/) with a fresh CoinMarketCap snapshot and
+# publishes it to gh-pages under app/, served at
+# https://nknysh.github.io/cmc-tests/app/. The API key stays in this job: the
+# app only reads the static JSON the snapshot step writes.
+on:
+  schedule:
+    # Daily at 06:00 UTC = 09:00 EEST (08:00 in winter, EET). One credit per run.
+    - cron: '0 6 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'scripts/snapshot-listings.ts'
+      - 'src/clients/coinmarketcap/**'
+      - '.github/workflows/app-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One gh-pages publisher at a time; each workflow pushes to the same branch.
+concurrency:
+  group: gh-pages-publish
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - run: npm ci --ignore-scripts
+
+      - run: npm ci --ignore-scripts
+        working-directory: app
+
+      # The chart's price history accumulates across runs in the deployed history.json.
+      - name: Restore deployed price history
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      # Overwrites the committed fixtures in app/public/data with live data. A
+      # failed call fails the job before publishing, so the last deploy stays up.
+      - name: Snapshot CoinMarketCap listings
+        run: ./node_modules/.bin/tsx scripts/snapshot-listings.ts app/public/data gh-pages/app/data/history.json
+        env:
+          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+
+      - name: Build app
+        run: npm run build
+        working-directory: app
+
+      - name: Publish app to gh-pages
+        run: |
+          git fetch origin gh-pages:gh-pages 2>/dev/null || git worktree add --orphan -b gh-pages _pages
+          [ -d _pages ] || git worktree add _pages gh-pages
+          rm -rf _pages/app
+          mkdir -p _pages/app
+          cp -r app/dist/. _pages/app/
+          cd _pages
+          git add -A
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "CoinBoard app" || exit 0
+          git push origin gh-pages

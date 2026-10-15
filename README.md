@@ -2,6 +2,10 @@
 
 Automated API, contract, performance and end-to-end tests for [CoinMarketCap](https://coinmarketcap.com), written in TypeScript with Playwright and k6. Results from every run are reported to Allure and published on GitHub Pages.
 
+## CoinBoard demo app
+
+[CoinBoard](https://nknysh.github.io/cmc-tests/app/) is a small React app showing the top 100 coins from CoinMarketCap, built as a target for Playwright UI tests. It covers a market table with search, sorting, filters, paging and CSV export; coin detail pages with a price chart; and a converter, coin comparison, watchlist and portfolio. A daily workflow fetches one `listings/latest` snapshot (1 API credit) and publishes it as static JSON, so the API key never reaches the browser. Run it locally with `cd app && npm install && npm run dev`; it uses committed fixture data, so no key is needed.
+
 ## Allure reports
 
 | Report | Link |

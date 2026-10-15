@@ -146,3 +146,40 @@ export const GainersLosersResponseSchema = z.object({
   ),
   status: CmcApiStatusSchema,
 })
+
+/**
+ * GET /v3/cryptocurrency/listings/latest. Like v3 quotes/latest, `quote` is an
+ * array with one entry per conversion currency, but `tags` are plain slugs.
+ * Every listed coin is active, so its price and market cap are numbers; a coin
+ * without a max supply has `max_supply: null`.
+ */
+export const ListingsLatestResponseSchema = z.object({
+  data: z.array(
+    z.object({
+      id: z.number().int(),
+      name: z.string(),
+      symbol: z.string(),
+      slug: z.string(),
+      cmc_rank: z.number().int(),
+      tags: z.array(z.string()),
+      date_added: z.iso.datetime(),
+      circulating_supply: z.number(),
+      total_supply: z.number(),
+      max_supply: z.number().nullable(),
+      quote: z.array(
+        z.object({
+          symbol: z.string(),
+          price: z.number(),
+          market_cap: z.number(),
+          market_cap_dominance: z.number(),
+          volume_24h: z.number(),
+          percent_change_1h: z.number(),
+          percent_change_24h: z.number(),
+          percent_change_7d: z.number(),
+          percent_change_30d: z.number(),
+        }),
+      ),
+    }),
+  ),
+  status: CmcApiStatusSchema,
+})

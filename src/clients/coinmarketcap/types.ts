@@ -3,6 +3,7 @@ import type { RateLimiter } from './RateLimiter'
 import type {
   CmcApiStatusSchema,
   GainersLosersResponseSchema,
+  ListingsLatestResponseSchema,
   QuoteResponseSchema,
   QuotesLatestV3ResponseSchema,
   SimplePriceResponseSchema,
@@ -173,3 +174,49 @@ export interface GainersLosersResult {
 }
 
 export type GainersLosersResponse = z.infer<typeof GainersLosersResponseSchema>
+
+export interface ListingsLatestOptions {
+  /** 1-based offset into the ranked list. API default: 1. */
+  start?: number
+  /** Number of results, 1–5000. API default: 100. */
+  limit?: number
+  /** One fiat/crypto symbol to convert into (the Basic plan allows one). API default: USD. */
+  convert?: string
+}
+
+export interface ListingQuote {
+  currency: string
+  price: number
+  marketCap: number
+  /** This coin's share of the whole crypto market cap, in percent. */
+  marketCapDominance: number
+  volume24h: number
+  percentChange1h: number
+  percentChange24h: number
+  percentChange7d: number
+  percentChange30d: number
+}
+
+export interface ListingEntry {
+  id: number
+  name: string
+  symbol: string
+  slug: string
+  rank: number
+  tags: string[]
+  dateAdded: string
+  circulatingSupply: number
+  totalSupply: number
+  maxSupply: number | null
+  quotes: ListingQuote[]
+}
+
+export interface ListingsLatestResult {
+  entries: ListingEntry[]
+  /** When CMC produced the response (status.timestamp). */
+  timestamp: string
+  /** Call credits the API charged for this request (status.credit_count). */
+  creditCount: number
+}
+
+export type ListingsLatestResponse = z.infer<typeof ListingsLatestResponseSchema>
