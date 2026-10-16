@@ -6,7 +6,7 @@ const SKIP_ENV_VAR = 'SKIP_CODE_REVIEW'
 const CLAUDE_BIN_ENV_VAR = 'CLAUDE_BIN'
 const DEFAULT_CLAUDE_BIN = 'claude'
 
-const TS_PATHSPECS = ['*.ts', '*.mts']
+const TS_PATHSPECS = ['*.ts', '*.mts', '*.tsx']
 // The well-known hash of git's empty tree; lets `git diff` work before the first commit.
 const EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
