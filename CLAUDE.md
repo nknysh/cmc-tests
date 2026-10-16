@@ -144,12 +144,6 @@ Playwright specs for the CoinBoard app, one spec per user story, all in `specs/`
 
 A separate daily script heals `tests/e2e/pages/CoinMarketCapHomePage.ts` locators with a local LLM, then runs the shared local-model auditor (`.agents/self-heal-commit-auditor/`, see its `CLAUDE.md`) on its own proposed patch before committing; details load from `.agents/coinmarketcap-navigation/CLAUDE.md` when working there. The auditor can veto the commit outright, since the script commits with `--no-verify` and would otherwise bypass the pre-commit review hook entirely. The BTC window heal also commits with `--no-verify`, gated by its code checks instead.
 
-## Git commits
-
-Never commit or push without asking first. Wait for an explicit request each time; approval for one commit or push doesn't carry over to the next.
-
-Do not add a `Co-Authored-By: Claude` trailer to commit messages — commits should read as authored solely by the user.
-
 ## Skills
 
 **Always use the user's global skills (`~/.claude/skills/`) when writing or updating tests, wherever one applies.** Load the matching skill before you start and follow its workflow, including any step where it asks for approval. Examples: `qa-thinking` and `qa-write-test-cases` before designing new cases, `automate-manual-test-cases` to automate cases from `data/test-cases.db`, `qa-split-testing-levels-pyramid` to choose live API vs offline contract, `detect-useless-tests` / `detect-duplicate-test-cases` / `qa-automation-test-consolidation` before removing or merging tests, and `debug-fix-failed-flaky-autotests` for failing or flaky specs. The local skills below still govern how this repo's code is written.
