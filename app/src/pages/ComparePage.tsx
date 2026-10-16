@@ -40,8 +40,8 @@ export function ComparePage() {
     <section>
       <h1>Compare coins</h1>
       <div className="toolbar">
-        <CoinSelect label="First coin" coins={coins} value={coinA.slug} onChange={(v) => set('a', v)} />
-        <CoinSelect label="Second coin" coins={coins} value={coinB.slug} onChange={(v) => set('b', v)} />
+        <CoinSelect label="First coin" testId="compare-first-coin" coins={coins} value={coinA.slug} onChange={(v) => set('a', v)} />
+        <CoinSelect label="Second coin" testId="compare-second-coin" coins={coins} value={coinB.slug} onChange={(v) => set('b', v)} />
       </div>
       {coinA.id === coinB.id ? (
         <p className="field-error" role="alert">

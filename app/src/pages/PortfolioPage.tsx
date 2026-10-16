@@ -20,7 +20,13 @@ const parseAmount = (raw: string): number | null => {
 }
 
 /** A native modal dialog, open while `open` is true. Escape or Cancel calls onClose. */
-function Modal({ open, title, onClose, children }: Readonly<{ open: boolean; title: string; onClose: () => void; children: ReactNode }>) {
+function Modal({
+  open,
+  title,
+  testId,
+  onClose,
+  children,
+}: Readonly<{ open: boolean; title: string; testId: string; onClose: () => void; children: ReactNode }>) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   useEffect(() => {
@@ -29,7 +35,7 @@ function Modal({ open, title, onClose, children }: Readonly<{ open: boolean; tit
     if (!open && dialog?.open) dialog.close()
   }, [open])
   return (
-    <dialog ref={ref} aria-labelledby={titleId} onClose={onClose} className="card">
+    <dialog ref={ref} aria-labelledby={titleId} onClose={onClose} className="card" data-testid={testId}>
       {/* Contents only while open, so a closed dialog's fields never match a locator. */}
       {open && (
         <>
@@ -61,7 +67,7 @@ function AddHoldingForm({ coins, onAdd }: Readonly<{ coins: readonly Coin[]; onA
 
   return (
     <form className="toolbar card" onSubmit={submit} aria-label="Add holding" noValidate>
-      <CoinSelect label="Coin" coins={coins} value={slug} onChange={setSlug} />
+      <CoinSelect label="Coin" testId="holding-coin" coins={coins} value={slug} onChange={setSlug} />
       <div className="field">
         <label htmlFor="holding-amount">Amount</label>
         <input
@@ -73,6 +79,7 @@ function AddHoldingForm({ coins, onAdd }: Readonly<{ coins: readonly Coin[]; onA
           aria-invalid={error !== null}
           aria-describedby={error ? 'holding-amount-error' : undefined}
           onChange={(e) => setAmount(e.target.value)}
+          data-testid="holding-amount"
         />
         {error && (
           <p id="holding-amount-error" className="field-error" role="alert">
@@ -80,7 +87,9 @@ function AddHoldingForm({ coins, onAdd }: Readonly<{ coins: readonly Coin[]; onA
           </p>
         )}
       </div>
-      <button type="submit">Add holding</button>
+      <button type="submit" data-testid="add-holding">
+        Add holding
+      </button>
     </form>
   )
 }
@@ -105,7 +114,7 @@ function EditDialog({ holding, coin, onSave, onClose }: Readonly<{ holding: Hold
   }
 
   return (
-    <Modal open={holding !== null} title={`Edit ${coin?.name ?? 'holding'}`} onClose={onClose}>
+    <Modal open={holding !== null} title={`Edit ${coin?.name ?? 'holding'}`} testId="edit-dialog" onClose={onClose}>
       <form className="stack" onSubmit={submit} noValidate>
         <div className="field">
           <label htmlFor="edit-amount">Amount</label>
@@ -118,6 +127,7 @@ function EditDialog({ holding, coin, onSave, onClose }: Readonly<{ holding: Hold
             aria-invalid={error !== null}
             aria-describedby={error ? 'edit-amount-error' : undefined}
             onChange={(e) => setAmount(e.target.value)}
+            data-testid="edit-amount"
           />
           {error && (
             <p id="edit-amount-error" className="field-error" role="alert">
@@ -126,10 +136,12 @@ function EditDialog({ holding, coin, onSave, onClose }: Readonly<{ holding: Hold
           )}
         </div>
         <div className="dialog-actions">
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={onClose} data-testid="edit-cancel">
             Cancel
           </button>
-          <button type="submit">Save</button>
+          <button type="submit" data-testid="edit-save">
+            Save
+          </button>
         </div>
       </form>
     </Modal>
@@ -206,9 +218,17 @@ export function PortfolioPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ holding, coin, value }) => (
-                  <tr key={holding.coinId}>
-                    <td>{coin ? <Link to={`/coin/${coin.slug}`}>{coin.name}</Link> : 'Not in current data'}</td>
+                {rows.map(({ holding, coin, value }, i) => (
+                  <tr key={holding.coinId} data-testid={`holding-row-${i + 1}`}>
+                    <td>
+                      {coin ? (
+                        <Link to={`/coin/${coin.slug}`} data-testid={`holding-link-${i + 1}`}>
+                          {coin.name}
+                        </Link>
+                      ) : (
+                        'Not in current data'
+                      )}
+                    </td>
                     <td className="num">
                       {formatAmount(holding.amount)} {coin?.symbol}
                     </td>
@@ -218,10 +238,20 @@ export function PortfolioPage() {
                       {coin ? formatPercent(coin.percentChange24h) : '—'}
                     </td>
                     <td className="row-actions">
-                      <button type="button" onClick={() => setEditing(holding)} aria-label={`Edit ${coin?.name ?? 'holding'}`}>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(holding)}
+                        aria-label={`Edit ${coin?.name ?? 'holding'}`}
+                        data-testid={`holding-edit-${i + 1}`}
+                      >
                         Edit
                       </button>
-                      <button type="button" onClick={() => setRemoving(holding)} aria-label={`Remove ${coin?.name ?? 'holding'}`}>
+                      <button
+                        type="button"
+                        onClick={() => setRemoving(holding)}
+                        aria-label={`Remove ${coin?.name ?? 'holding'}`}
+                        data-testid={`holding-remove-${i + 1}`}
+                      >
                         Remove
                       </button>
                     </td>
@@ -237,14 +267,15 @@ export function PortfolioPage() {
       <Modal
         open={removing !== null}
         title={`Remove ${(removing && coinFor(removing.coinId)?.name) ?? 'holding'}?`}
+        testId="remove-dialog"
         onClose={() => setRemoving(null)}
       >
         <p>This removes it from your portfolio on this device.</p>
         <div className="dialog-actions">
-          <button type="button" onClick={() => setRemoving(null)}>
+          <button type="button" onClick={() => setRemoving(null)} data-testid="remove-cancel">
             Cancel
           </button>
-          <button type="button" className="danger" onClick={remove}>
+          <button type="button" className="danger" onClick={remove} data-testid="remove-confirm">
             Remove
           </button>
         </div>

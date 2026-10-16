@@ -23,14 +23,14 @@ export function App() {
   return (
     <>
       <header className="site-header">
-        <NavLink to="/" className="brand">
+        <NavLink to="/" className="brand" data-testid="nav-brand">
           CoinBoard
         </NavLink>
         <nav aria-label="Main">
           <ul>
-            {NAV.map((item) => (
+            {NAV.map((item, i) => (
               <li key={item.to}>
-                <NavLink to={item.to} end>
+                <NavLink to={item.to} end data-testid={`nav-link-${i + 1}`}>
                   {item.label}
                 </NavLink>
               </li>
@@ -58,7 +58,7 @@ export function App() {
         )}
       </main>
       <footer className="site-footer">
-        Data from <a href="https://coinmarketcap.com/api/">CoinMarketCap</a>, refreshed daily. Not financial advice.
+        Data from <a href="https://coinmarketcap.com/api/" data-testid="footer-source-link">CoinMarketCap</a>, refreshed daily. Not financial advice.
       </footer>
     </>
   )

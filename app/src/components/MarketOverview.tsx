@@ -26,7 +26,7 @@ export function MarketSummaryBar({ coins }: Readonly<{ coins: readonly Coin[] }>
   )
 }
 
-function MoverList({ title, coins }: Readonly<{ title: string; coins: Coin[] }>) {
+function MoverList({ title, testId, coins }: Readonly<{ title: string; testId: string; coins: Coin[] }>) {
   return (
     <section className="card movers" aria-labelledby={`${title}-heading`.replaceAll(' ', '-')}>
       <h2 id={`${title}-heading`.replaceAll(' ', '-')}>{title}</h2>
@@ -34,9 +34,9 @@ function MoverList({ title, coins }: Readonly<{ title: string; coins: Coin[] }>)
         <p className="muted">None right now.</p>
       ) : (
         <ol>
-          {coins.map((coin) => (
+          {coins.map((coin, i) => (
             <li key={coin.id}>
-              <Link to={`/coin/${coin.slug}`}>
+              <Link to={`/coin/${coin.slug}`} data-testid={`${testId}-link-${i + 1}`}>
                 <CoinLogo id={coin.id} size={20} />
                 <span>{coin.name}</span>
               </Link>
@@ -53,8 +53,8 @@ export function TopMovers({ coins }: Readonly<{ coins: readonly Coin[] }>) {
   const { gainers, losers } = topMovers(coins)
   return (
     <div className="movers-grid">
-      <MoverList title="Top gainers 24h" coins={gainers} />
-      <MoverList title="Top losers 24h" coins={losers} />
+      <MoverList title="Top gainers 24h" testId="top-gainers" coins={gainers} />
+      <MoverList title="Top losers 24h" testId="top-losers" coins={losers} />
     </div>
   )
 }

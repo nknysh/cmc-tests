@@ -76,7 +76,13 @@ function SearchBox({ value, onChange }: Readonly<{ value: string; onChange: (val
   return (
     <label className="field">
       <span>Search</span>
-      <input type="search" placeholder="Name or symbol" value={draft} onChange={(e) => setDraft(e.target.value)} />
+      <input
+        type="search"
+        placeholder="Name or symbol"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        data-testid="search-input"
+      />
     </label>
   )
 }
@@ -86,18 +92,29 @@ function TagFilter({ tags, selected, onChange }: Readonly<{ tags: TagOption[]; s
     onChange(selected.includes(tag) ? selected.filter((t) => t !== tag) : [...selected, tag])
   return (
     <details className="dropdown">
-      <summary>Tags{selected.length ? ` (${selected.length})` : ''}</summary>
+      <summary data-testid="tag-filter-toggle">Tags{selected.length ? ` (${selected.length})` : ''}</summary>
       <fieldset>
         <legend>Show coins with any of these tags</legend>
-        {tags.map((tag) => (
+        {tags.map((tag, i) => (
           <label key={tag.slug} className="check">
-            <input type="checkbox" checked={selected.includes(tag.slug)} onChange={() => toggle(tag.slug)} />
+            <input
+              type="checkbox"
+              checked={selected.includes(tag.slug)}
+              onChange={() => toggle(tag.slug)}
+              data-testid={`tag-filter-option-${i + 1}`}
+            />
             <span>
               {tag.label} <span className="muted">({tag.count})</span>
             </span>
           </label>
         ))}
-        <button type="button" className="link-button" onClick={() => onChange([])} disabled={!selected.length}>
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => onChange([])}
+          disabled={!selected.length}
+          data-testid="tag-filter-clear"
+        >
           Clear tags
         </button>
       </fieldset>
@@ -108,10 +125,10 @@ function TagFilter({ tags, selected, onChange }: Readonly<{ tags: TagOption[]; s
 function ColumnMenu({ hidden, onChange }: Readonly<{ hidden: SortKey[]; onChange: (hidden: SortKey[]) => void }>) {
   return (
     <details className="dropdown">
-      <summary>Columns</summary>
+      <summary data-testid="column-menu-toggle">Columns</summary>
       <fieldset>
         <legend>Visible columns</legend>
-        {COLUMNS.filter((c) => c.hideable).map((column) => (
+        {COLUMNS.filter((c) => c.hideable).map((column, i) => (
           <label key={column.key} className="check">
             <input
               type="checkbox"
@@ -119,6 +136,7 @@ function ColumnMenu({ hidden, onChange }: Readonly<{ hidden: SortKey[]; onChange
               onChange={() =>
                 onChange(hidden.includes(column.key) ? hidden.filter((k) => k !== column.key) : [...hidden, column.key])
               }
+              data-testid={`column-option-${i + 1}`}
             />
             <span>{column.label}</span>
           </label>
@@ -141,6 +159,7 @@ function CapRangeFilter({ query, update }: Readonly<{ query: MarketQuery; update
           aria-invalid={!range.ok}
           aria-describedby={range.ok ? undefined : 'cap-range-error'}
           onChange={(e) => update({ capMin: e.target.value })}
+          data-testid="cap-min"
         />
       </label>
       <label className="field">
@@ -151,6 +170,7 @@ function CapRangeFilter({ query, update }: Readonly<{ query: MarketQuery; update
           aria-invalid={!range.ok}
           aria-describedby={range.ok ? undefined : 'cap-range-error'}
           onChange={(e) => update({ capMax: e.target.value })}
+          data-testid="cap-max"
         />
       </label>
       {!range.ok && (
@@ -162,7 +182,12 @@ function CapRangeFilter({ query, update }: Readonly<{ query: MarketQuery; update
   )
 }
 
-function SortHeader({ column, query, onSort }: Readonly<{ column: Column; query: MarketQuery; onSort: (key: SortKey) => void }>) {
+function SortHeader({
+  column,
+  index,
+  query,
+  onSort,
+}: Readonly<{ column: Column; index: number; query: MarketQuery; onSort: (key: SortKey) => void }>) {
   const active = query.sort === column.key
   const ascending = query.dir === 'asc'
   let ariaSort: 'ascending' | 'descending' | 'none' = 'none'
@@ -171,7 +196,7 @@ function SortHeader({ column, query, onSort }: Readonly<{ column: Column; query:
   if (active) arrow = ascending ? ' ▲' : ' ▼'
   return (
     <th scope="col" aria-sort={ariaSort} className={column.numeric ? 'num' : undefined}>
-      <button type="button" className="sort-button" onClick={() => onSort(column.key)}>
+      <button type="button" className="sort-button" onClick={() => onSort(column.key)} data-testid={`sort-button-${index}`}>
         {column.label}
         <span aria-hidden="true">{arrow}</span>
       </button>
@@ -221,7 +246,7 @@ export function MarketsPage() {
       <section aria-label="Filters" className="toolbar">
         <SearchBox value={query.search} onChange={(search) => update({ search })} />
         <div role="radiogroup" aria-label="24h movement" className="segmented">
-          {MOVEMENTS.map((m) => (
+          {MOVEMENTS.map((m, i) => (
             <label key={m.value}>
               <input
                 type="radio"
@@ -229,6 +254,7 @@ export function MarketsPage() {
                 value={m.value}
                 checked={query.movement === m.value}
                 onChange={() => update({ movement: m.value })}
+                data-testid={`movement-filter-${i + 1}`}
               />
               <span>{m.label}</span>
             </label>
@@ -241,15 +267,21 @@ export function MarketsPage() {
             type="checkbox"
             checked={query.watchlistOnly}
             onChange={(e) => update({ watchlistOnly: e.target.checked })}
+            data-testid="watchlist-only"
           />
           <span>Watchlist only</span>
         </label>
         <CapRangeFilter query={query} update={update} />
         <div className="toolbar-actions">
-          <button type="button" onClick={resetFilters} disabled={!filtered}>
+          <button type="button" onClick={resetFilters} disabled={!filtered} data-testid="reset-filters">
             Reset filters
           </button>
-          <button type="button" onClick={() => downloadText(CSV_FILENAME, toCsv(rows))} disabled={!rows.length}>
+          <button
+            type="button"
+            onClick={() => downloadText(CSV_FILENAME, toCsv(rows))}
+            disabled={!rows.length}
+            data-testid="export-csv"
+          >
             Export CSV
           </button>
         </div>
@@ -262,7 +294,7 @@ export function MarketsPage() {
       {rows.length === 0 ? (
         <div className="empty card">
           <p>{query.watchlistOnly && watchlist.ids.length === 0 ? 'Your watchlist is empty.' : 'No coins match your filters.'}</p>
-          <button type="button" onClick={resetFilters}>
+          <button type="button" onClick={resetFilters} data-testid="empty-reset-filters">
             Reset filters
           </button>
         </div>
@@ -275,21 +307,26 @@ export function MarketsPage() {
                   <th scope="col">
                     <span className="visually-hidden">Watchlist</span>
                   </th>
-                  {columns.map((column) => (
-                    <SortHeader key={column.key} column={column} query={query} onSort={onSort} />
+                  {columns.map((column, i) => (
+                    <SortHeader key={column.key} column={column} index={i + 1} query={query} onSort={onSort} />
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {pageRows.map((coin) => (
-                  <tr key={coin.id}>
+                {pageRows.map((coin, i) => (
+                  <tr key={coin.id} data-testid={`coin-row-${i + 1}`}>
                     <td>
-                      <WatchStar coin={coin} starred={watchlist.has(coin.id)} onToggle={watchlist.toggle} />
+                      <WatchStar
+                        coin={coin}
+                        starred={watchlist.has(coin.id)}
+                        onToggle={watchlist.toggle}
+                        testId={`coin-row-watch-star-${i + 1}`}
+                      />
                     </td>
                     {columns.map((column) =>
                       column.key === 'name' ? (
                         <td key={column.key}>
-                          <Link to={`/coin/${coin.slug}`} className="coin-name">
+                          <Link to={`/coin/${coin.slug}`} className="coin-name" data-testid={`coin-row-link-${i + 1}`}>
                             <CoinLogo id={coin.id} />
                             {coin.name} <span className="muted">{coin.symbol}</span>
                           </Link>
@@ -307,9 +344,9 @@ export function MarketsPage() {
           </div>
 
           <ul className="coin-cards" aria-label="Cryptocurrencies">
-            {pageRows.map((coin) => (
-              <li key={coin.id} className="card">
-                <Link to={`/coin/${coin.slug}`} className="coin-name">
+            {pageRows.map((coin, i) => (
+              <li key={coin.id} className="card" data-testid={`coin-card-${i + 1}`}>
+                <Link to={`/coin/${coin.slug}`} className="coin-name" data-testid={`coin-card-link-${i + 1}`}>
                   <CoinLogo id={coin.id} />
                   <span>
                     #{coin.rank} {coin.name} <span className="muted">{coin.symbol}</span>
@@ -319,26 +356,45 @@ export function MarketsPage() {
                   <Price value={coin.price} />
                 </span>
                 <span className={changeClass(coin.percentChange24h)}>{formatPercent(coin.percentChange24h)}</span>
-                <WatchStar coin={coin} starred={watchlist.has(coin.id)} onToggle={watchlist.toggle} />
+                <WatchStar
+                  coin={coin}
+                  starred={watchlist.has(coin.id)}
+                  onToggle={watchlist.toggle}
+                  testId={`coin-card-watch-star-${i + 1}`}
+                />
               </li>
             ))}
           </ul>
 
           <nav className="pagination" aria-label="Pagination">
-            <button type="button" onClick={() => update({ page: page - 1 })} disabled={page <= 1}>
+            <button
+              type="button"
+              onClick={() => update({ page: page - 1 })}
+              disabled={page <= 1}
+              data-testid="pagination-previous"
+            >
               Previous
             </button>
             <span>
               Page {page} of {pageCount}
             </span>
-            <button type="button" onClick={() => update({ page: page + 1 })} disabled={page >= pageCount}>
+            <button
+              type="button"
+              onClick={() => update({ page: page + 1 })}
+              disabled={page >= pageCount}
+              data-testid="pagination-next"
+            >
               Next
             </button>
             <label className="field inline">
               <span>Rows per page</span>
-              <select value={query.size} onChange={(e) => update({ size: Number(e.target.value) as PageSize })}>
-                {PAGE_SIZES.map((size) => (
-                  <option key={size} value={size}>
+              <select
+                value={query.size}
+                onChange={(e) => update({ size: Number(e.target.value) as PageSize })}
+                data-testid="page-size"
+              >
+                {PAGE_SIZES.map((size, i) => (
+                  <option key={size} value={size} data-testid={`page-size-option-${i + 1}`}>
                     {size}
                   </option>
                 ))}

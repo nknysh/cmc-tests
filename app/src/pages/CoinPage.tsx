@@ -52,8 +52,14 @@ function Chart({ coin, snapshotTime }: Readonly<{ coin: Coin; snapshotTime: stri
       <div className="section-head">
         <h2 id="chart-heading">Price chart</h2>
         <div role="group" aria-label="Chart range" className="segmented">
-          {RANGES.map((r) => (
-            <button key={r.id} type="button" aria-pressed={range === r.id} onClick={() => setRange(r.id)}>
+          {RANGES.map((r, i) => (
+            <button
+              key={r.id}
+              type="button"
+              aria-pressed={range === r.id}
+              onClick={() => setRange(r.id)}
+              data-testid={`chart-range-${i + 1}`}
+            >
               {r.label}
             </button>
           ))}
@@ -83,7 +89,9 @@ export function CoinPage() {
       <section className="empty card">
         <h1>Coin not found</h1>
         <p>No coin with the slug “{slug}” is in the current top {snapshot.coins.length}.</p>
-        <Link to="/">Back to all coins</Link>
+        <Link to="/" data-testid="back-link">
+          Back to all coins
+        </Link>
       </section>
     )
   }
@@ -106,7 +114,7 @@ export function CoinPage() {
 
   return (
     <article className="coin-page">
-      <Link to="/" className="back-link">
+      <Link to="/" className="back-link" data-testid="back-link">
         ← All coins
       </Link>
       <header className="coin-header">
@@ -115,7 +123,7 @@ export function CoinPage() {
           {coin.name} <span className="muted">{coin.symbol}</span>
         </h1>
         <span className="badge">Rank #{coin.rank}</span>
-        <WatchStar coin={coin} starred={watchlist.has(coin.id)} onToggle={watchlist.toggle} />
+        <WatchStar coin={coin} starred={watchlist.has(coin.id)} onToggle={watchlist.toggle} testId="watch-star" />
       </header>
 
       <p className="coin-price" data-testid="coin-price">
@@ -156,7 +164,12 @@ export function CoinPage() {
             ))}
           </ul>
           {coin.tags.length > TAG_PREVIEW && (
-            <button type="button" className="link-button" onClick={() => setShowAllTags((v) => !v)}>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => setShowAllTags((v) => !v)}
+              data-testid="tags-toggle"
+            >
               {showAllTags ? 'Show fewer' : `Show all ${coin.tags.length} tags`}
             </button>
           )}

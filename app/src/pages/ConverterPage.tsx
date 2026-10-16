@@ -34,6 +34,7 @@ export function ConverterPage() {
             aria-invalid={!valid}
             aria-describedby={valid ? undefined : 'convert-amount-error'}
             onChange={(e) => setAmount(e.target.value)}
+            data-testid="convert-amount"
           />
           {!valid && (
             <p id="convert-amount-error" className="field-error" role="alert">
@@ -41,10 +42,11 @@ export function ConverterPage() {
             </p>
           )}
         </div>
-        <CoinSelect label="From" coins={coins} value={from} onChange={setFrom} includeUsd />
+        <CoinSelect label="From" testId="convert-from" coins={coins} value={from} onChange={setFrom} includeUsd />
         <button
           type="button"
           className="swap"
+          data-testid="convert-swap"
           onClick={() => {
             setFrom(to)
             setTo(from)
@@ -52,7 +54,7 @@ export function ConverterPage() {
         >
           ⇅ Swap
         </button>
-        <CoinSelect label="To" coins={coins} value={to} onChange={setTo} includeUsd />
+        <CoinSelect label="To" testId="convert-to" coins={coins} value={to} onChange={setTo} includeUsd />
       </form>
       <output className="convert-result" data-testid="conversion-result" aria-live="polite">
         {valid && fromUnit && toUnit

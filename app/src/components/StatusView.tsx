@@ -25,7 +25,7 @@ export function LoadError({ message, onRetry, what = 'market data' }: Readonly<{
     <div className="error-panel" role="alert">
       <h2>Couldn't load {what}</h2>
       <p className="muted">{message}</p>
-      <button type="button" onClick={onRetry}>
+      <button type="button" onClick={onRetry} data-testid="retry-button">
         Retry
       </button>
     </div>

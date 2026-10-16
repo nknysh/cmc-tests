@@ -28,7 +28,13 @@ export function ThemeToggle() {
   }
 
   return (
-    <button type="button" className="icon-button" onClick={toggle} aria-label={`Switch to ${next} theme`}>
+    <button
+      type="button"
+      className="icon-button"
+      onClick={toggle}
+      aria-label={`Switch to ${next} theme`}
+      data-testid="theme-toggle"
+    >
       {theme === 'dark' ? '☀' : '☾'}
     </button>
   )
