@@ -34,6 +34,9 @@ export class CoinPage {
 
   /** The value of one Statistics entry, e.g. `stat('Market cap')`. */
   stat(label: string): Locator {
+    // A term has no accessible name from its text, so it's matched by role and text together. The
+    // `has` locator is resolved inside each entry, so it's built from the page; the entries
+    // themselves are scoped to Statistics.
     const term = this.page.getByRole('term').and(this.page.getByText(label, { exact: true }))
     return this.statistics.locator('div').filter({ has: term }).getByRole('definition')
   }

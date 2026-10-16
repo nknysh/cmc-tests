@@ -23,7 +23,9 @@ type Metric = (typeof METRICS)[number]
 
 const CHANGE_PERIODS: ChangePeriod[] = ['1h', '24h', '7d', '30d']
 const changeMetric = (period: ChangePeriod): Metric => `${period} change`
-const CHANGE_STATES = ['up', 'down', 'flat']
+const CHANGE_STATES = ['up', 'down', 'flat'] as const
+type ChangeState = (typeof CHANGE_STATES)[number]
+const isChangeState = (name: string): name is ChangeState => (CHANGE_STATES as readonly string[]).includes(name)
 
 const NO_MAX_SUPPLY = '∞'
 
@@ -32,19 +34,24 @@ const BITCOIN_FLAT_1H = withCoinChanged(fixtureSnapshot, 'bitcoin', { percentCha
 
 interface CoinColumn {
   values: Record<Metric, string>
-  states: Record<ChangePeriod, string>
+  states: Record<ChangePeriod, ChangeState>
 }
 
-/** Reads one coin's 10 values from the comparison, and the up/down/flat state of its 4 change cells. */
+/**
+ * Reads one coin's 10 values from the comparison, and the up/down/flat state of its 4 change cells.
+ * Throws if a change cell has no state, so the details page is never checked against an empty one.
+ */
 async function readColumn(comparePage: ComparePage, side: Side): Promise<CoinColumn> {
   const values = {} as Record<Metric, string>
   for (const metric of METRICS) {
     values[metric] = (await comparePage.cell(metric, side).textContent())?.trim() ?? ''
   }
-  const states = {} as Record<ChangePeriod, string>
+  const states = {} as Record<ChangePeriod, ChangeState>
   for (const period of CHANGE_PERIODS) {
     const classes = (await comparePage.cell(changeMetric(period), side).getAttribute('class'))?.split(' ') ?? []
-    states[period] = classes.find((name) => CHANGE_STATES.includes(name)) ?? ''
+    const state = classes.find(isChangeState)
+    if (!state) throw new Error(`The ${changeMetric(period)} cell has none of the classes ${CHANGE_STATES.join(', ')}: "${classes.join(' ')}"`)
+    states[period] = state
   }
   return { values, states }
 }
