@@ -1,7 +1,7 @@
 import { NavLink, Route, Routes } from 'react-router-dom'
 import { useMarketData } from './data/MarketData'
 import { FreshnessBadge } from './components/FreshnessBadge'
-import { LoadError, LoadingSkeleton } from './components/StatusView'
+import { LoadError, LoadingSkeleton, NoMarketData } from './components/StatusView'
 import { ThemeToggle } from './components/ThemeToggle'
 import { MarketsPage } from './pages/MarketsPage'
 import { CoinPage } from './pages/CoinPage'
@@ -38,14 +38,15 @@ export function App() {
           </ul>
         </nav>
         <div className="header-tools">
-          {state.status === 'ready' && <FreshnessBadge updatedAt={state.data.updatedAt} />}
+          {state.status === 'ready' && state.data && <FreshnessBadge updatedAt={state.data.snapshot.updatedAt} />}
           <ThemeToggle />
         </div>
       </header>
       <main>
         {state.status === 'loading' && <LoadingSkeleton />}
         {state.status === 'error' && <LoadError message={state.message} onRetry={retry} />}
-        {state.status === 'ready' && (
+        {state.status === 'ready' && !state.data && <NoMarketData />}
+        {state.status === 'ready' && state.data && (
           <Routes>
             <Route path="/" element={<MarketsPage />} />
             <Route path="/coin/:slug" element={<CoinPage />} />

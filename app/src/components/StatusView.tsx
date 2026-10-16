@@ -10,6 +10,16 @@ export function LoadingSkeleton() {
   )
 }
 
+/** Market data loaded, but none of it is valid to show (APP-06/AC-10). */
+export function NoMarketData() {
+  return (
+    <div className="error-panel">
+      <h2>No market data available</h2>
+      <p className="muted">There's no valid market data to show right now. Check back after the next daily update.</p>
+    </div>
+  )
+}
+
 export function LoadError({ message, onRetry, what = 'market data' }: Readonly<{ message: string; onRetry: () => void; what?: string }>) {
   return (
     <div className="error-panel" role="alert">

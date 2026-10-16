@@ -6,7 +6,8 @@ import { CoinLogo } from '../components/CoinLogo'
 import { PriceChart, samplesFor } from '../components/PriceChart'
 import { LoadError } from '../components/StatusView'
 import { WatchStar } from '../components/WatchStar'
-import { changeClass, formatCompactUsd, formatNumber, formatPercent, formatPrice } from '../lib/format'
+import { Price } from '../components/Price'
+import { changeClass, formatCompactUsd, formatNumber, formatPercent } from '../lib/format'
 import { useWatchlist } from '../lib/watchlist'
 
 const HOUR_MS = 60 * 60 * 1000
@@ -118,7 +119,7 @@ export function CoinPage() {
       </header>
 
       <p className="coin-price" data-testid="coin-price">
-        {formatPrice(coin.price)}
+        <Price value={coin.price} />
       </p>
       <ul className="changes" aria-label="Price change">
         {changes.map((change) => (

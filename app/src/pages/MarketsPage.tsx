@@ -5,7 +5,8 @@ import type { Coin } from '../data/types'
 import { CoinLogo } from '../components/CoinLogo'
 import { MarketSummaryBar, TopMovers } from '../components/MarketOverview'
 import { WatchStar } from '../components/WatchStar'
-import { changeClass, formatPercent, formatPrice } from '../lib/format'
+import { Price } from '../components/Price'
+import { changeClass, formatPercent } from '../lib/format'
 import {
   COLUMNS,
   DEFAULT_QUERY,
@@ -295,7 +296,7 @@ export function MarketsPage() {
                         </td>
                       ) : (
                         <td key={column.key} className={cellClass(column, coin)}>
-                          {column.format(coin)}
+                          {column.key === 'price' ? <Price value={coin.price} /> : column.format(coin)}
                         </td>
                       ),
                     )}
@@ -314,7 +315,9 @@ export function MarketsPage() {
                     #{coin.rank} {coin.name} <span className="muted">{coin.symbol}</span>
                   </span>
                 </Link>
-                <span>{formatPrice(coin.price)}</span>
+                <span>
+                  <Price value={coin.price} />
+                </span>
                 <span className={changeClass(coin.percentChange24h)}>{formatPercent(coin.percentChange24h)}</span>
                 <WatchStar coin={coin} starred={watchlist.has(coin.id)} onToggle={watchlist.toggle} />
               </li>

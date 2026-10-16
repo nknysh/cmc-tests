@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useSnapshot } from '../data/MarketData'
 import type { Coin } from '../data/types'
 import { CoinSelect } from '../components/CoinSelect'
+import { Price } from '../components/Price'
 import { changeClass, formatAmount, formatPercent, formatPrice } from '../lib/format'
 import { STORAGE_KEYS, useStoredState } from '../lib/storage'
 
@@ -211,7 +212,7 @@ export function PortfolioPage() {
                     <td className="num">
                       {formatAmount(holding.amount)} {coin?.symbol}
                     </td>
-                    <td className="num">{coin ? formatPrice(coin.price) : '—'}</td>
+                    <td className="num">{coin ? <Price value={coin.price} /> : '—'}</td>
                     <td className="num">{formatPrice(value)}</td>
                     <td className={`num ${coin ? changeClass(coin.percentChange24h) : ''}`}>
                       {coin ? formatPercent(coin.percentChange24h) : '—'}

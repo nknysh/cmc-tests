@@ -1,15 +1,17 @@
+import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useSnapshot } from '../data/MarketData'
 import type { Coin } from '../data/types'
 import { CoinSelect } from '../components/CoinSelect'
-import { changeClass, formatCompactUsd, formatNumber, formatPercent, formatPrice } from '../lib/format'
+import { Price } from '../components/Price'
+import { changeClass, formatCompactUsd, formatNumber, formatPercent } from '../lib/format'
 
 const DEFAULT_A = 'bitcoin'
 const DEFAULT_B = 'ethereum'
 
-const METRICS: { label: string; render: (coin: Coin) => string; change?: (coin: Coin) => number }[] = [
+const METRICS: { label: string; render: (coin: Coin) => ReactNode; change?: (coin: Coin) => number }[] = [
   { label: 'Rank', render: (c) => `#${c.rank}` },
-  { label: 'Price', render: (c) => formatPrice(c.price) },
+  { label: 'Price', render: (c) => <Price value={c.price} /> },
   { label: 'Market cap', render: (c) => formatCompactUsd(c.marketCap) },
   { label: 'Volume (24h)', render: (c) => formatCompactUsd(c.volume24h) },
   { label: '1h change', render: (c) => formatPercent(c.percentChange1h), change: (c) => c.percentChange1h },
