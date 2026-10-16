@@ -6,9 +6,6 @@ import { CoinSelect } from '../components/CoinSelect'
 import { Price } from '../components/Price'
 import { changeClass, formatCompactUsd, formatNumber, formatPercent } from '../lib/format'
 
-const DEFAULT_A = 'bitcoin'
-const DEFAULT_B = 'ethereum'
-
 const METRICS: { label: string; render: (coin: Coin) => ReactNode; change?: (coin: Coin) => number }[] = [
   { label: 'Rank', render: (c) => `#${c.rank}` },
   { label: 'Price', render: (c) => <Price value={c.price} /> },
@@ -22,29 +19,33 @@ const METRICS: { label: string; render: (coin: Coin) => ReactNode; change?: (coi
   { label: 'Max supply', render: (c) => (c.maxSupply === null ? '∞' : formatNumber(c.maxSupply)) },
 ]
 
-/** Two coins side by side. The pair is kept in the URL (`?a=…&b=…`). */
+/**
+ * Two coins side by side. The pair is kept in the URL (`?a=…&b=…`). A slug that's
+ * absent, empty or not in the snapshot falls back to that choice's default: the
+ * top-ranked coin for the first, the second-ranked for the second (CMP-01/AC-7).
+ */
 export function ComparePage() {
   const { coins } = useSnapshot()
   const [params, setParams] = useSearchParams()
-  const a = params.get('a') ?? DEFAULT_A
-  const b = params.get('b') ?? DEFAULT_B
-  const coinA = coins.find((c) => c.slug === a)
-  const coinB = coins.find((c) => c.slug === b)
-  const set = (key: 'a' | 'b', value: string) => setParams({ a, b, [key]: value }, { replace: true })
-  let problem: string | null = null
-  if (!coinA || !coinB) problem = "One of these coins isn't in the current data. Pick another."
-  else if (a === b) problem = 'Pick two different coins to compare.'
+  const bySlug = (slug: string | null) => coins.find((c) => c.slug === slug)
+  const coinA: Coin | undefined = bySlug(params.get('a')) ?? coins[0]
+  const coinB: Coin | undefined = bySlug(params.get('b')) ?? coins[1] ?? coins[0]
+  if (!coinA || !coinB) return null
+
+  // Writes the coins shown, so a fallen-back slug leaves the address (CMP-03/AC-5).
+  const set = (key: 'a' | 'b', value: string) =>
+    setParams({ a: coinA.slug, b: coinB.slug, [key]: value }, { replace: true })
 
   return (
     <section>
       <h1>Compare coins</h1>
       <div className="toolbar">
-        <CoinSelect label="First coin" coins={coins} value={a} onChange={(v) => set('a', v)} />
-        <CoinSelect label="Second coin" coins={coins} value={b} onChange={(v) => set('b', v)} />
+        <CoinSelect label="First coin" coins={coins} value={coinA.slug} onChange={(v) => set('a', v)} />
+        <CoinSelect label="Second coin" coins={coins} value={coinB.slug} onChange={(v) => set('b', v)} />
       </div>
-      {problem || !coinA || !coinB ? (
+      {coinA.id === coinB.id ? (
         <p className="field-error" role="alert">
-          {problem}
+          Pick two different coins to compare.
         </p>
       ) : (
         <div className="table-wrap">
