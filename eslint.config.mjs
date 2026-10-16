@@ -19,7 +19,7 @@ export default defineConfig(
       'playwright/no-networkidle': 'error',
       'playwright/prefer-web-first-assertions': 'error',
       'playwright/no-conditional-in-test': 'error',
-      'playwright/expect-expect': ['error', { assertFunctionNames: ['expectMatchesSchema'] }],
+      'playwright/expect-expect': ['error', { assertFunctionNames: ['expectMatchesSchema', 'expectPairShown'] }],
     },
   },
 )

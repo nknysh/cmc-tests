@@ -1,6 +1,12 @@
 import type { Locator, Page } from '@playwright/test'
 import type { CompareMetric, Side } from '../types'
 
+/** The route and query of a hash-routed address, e.g. `#/compare?a=bnb&b=tether`. */
+export interface HashAddress {
+  route: string
+  query: Record<string, string>
+}
+
 /** The CoinBoard Compare page (`#/compare`). */
 export class ComparePage {
   readonly heading: Locator
@@ -10,6 +16,8 @@ export class ComparePage {
   /** The comparison's header cells: "Metric", then one per coin. */
   readonly columnHeaders: Locator
   readonly alert: Locator
+  /** The Compare link in the main navigation, shown on every page. */
+  readonly navLink: Locator
 
   constructor(readonly page: Page) {
     this.heading = page.getByRole('heading', { level: 1, name: 'Compare coins' })
@@ -18,12 +26,20 @@ export class ComparePage {
     this.table = page.getByRole('table', { name: 'Coin comparison' })
     this.columnHeaders = this.table.getByRole('columnheader')
     this.alert = page.getByRole('alert')
+    this.navLink = page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Compare', exact: true })
   }
 
   /** Opens the page, optionally with a pair in the address, e.g. `?a=bnb&b=tether`. */
   async goto(query = '') {
     await this.page.goto(`#/compare${query}`)
     await this.heading.waitFor()
+  }
+
+  /** The current address's hash route and query, so a pair can be checked in any parameter order. */
+  address(): HashAddress {
+    const hash = new URL(this.page.url()).hash.replace(/^#/, '')
+    const [route = '', search = ''] = hash.split('?', 2)
+    return { route, query: Object.fromEntries(new URLSearchParams(search)) }
   }
 
   select(side: Side): Locator {
