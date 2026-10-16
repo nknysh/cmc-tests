@@ -59,6 +59,7 @@
     "node-llama-cpp": "^3.21.1"
   },
   "allowScripts": {
-    "node-llama-cpp@3.21.1": true
+    "node-llama-cpp@3.21.1": true,
+    "@anthropic-ai/claude-code@2.1.282": true
   }
 }

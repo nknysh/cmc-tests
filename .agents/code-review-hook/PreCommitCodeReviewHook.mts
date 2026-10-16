@@ -4,6 +4,7 @@ import path from 'node:path'
 const LOG_PREFIX = '[code-review-hook]'
 const SKIP_ENV_VAR = 'SKIP_CODE_REVIEW'
 const CLAUDE_BIN_ENV_VAR = 'CLAUDE_BIN'
+const DEFAULT_CLAUDE_BIN = 'claude'
 
 const TS_PATHSPECS = ['*.ts', '*.mts']
 // The well-known hash of git's empty tree; lets `git diff` work before the first commit.
@@ -105,6 +106,28 @@ function isReviewResult(value: unknown): value is ReviewResult {
 }
 
 /**
+ * How to fix a failure to start the claude CLI. Under `npm run`, `claude`
+ * resolves to node_modules/.bin/claude from the @anthropic-ai/claude-code dev
+ * dependency. If npm skipped that package's postinstall (it's gated by
+ * `allowScripts`), the binary is a text placeholder that can't be executed:
+ * ENOEXEC, or EACCES without the executable bit. That advice only fits the
+ * default `claude`; a binary configured via $CLAUDE_BIN gets a plain hint.
+ */
+function spawnErrorHint(error: Error, claudeBin: string): string {
+  const code = (error as NodeJS.ErrnoException).code
+  if (code === 'ENOENT') return ` (set ${CLAUDE_BIN_ENV_VAR} to its path)`
+  if (code !== 'ENOEXEC' && code !== 'EACCES') return ''
+  if (claudeBin !== DEFAULT_CLAUDE_BIN) {
+    return ` (the configured binary isn't executable: check that ${CLAUDE_BIN_ENV_VAR} points to a working claude)`
+  }
+  return (
+    ` (the binary isn't runnable, likely because the @anthropic-ai/claude-code postinstall didn't run:` +
+    ` run \`npm install-scripts approve @anthropic-ai/claude-code && npm rebuild @anthropic-ai/claude-code\`,` +
+    ` or set ${CLAUDE_BIN_ENV_VAR} to a working claude)`
+  )
+}
+
+/**
  * Git pre-commit hook that code-reviews all uncommitted TypeScript changes
  * (staged, unstaged, and untracked) by running the `typescript-code-review`
  * skill through a headless `claude -p` session, and fails the commit when the
@@ -127,7 +150,7 @@ export class PreCommitCodeReviewHook {
 
   constructor({
     repoRoot = process.cwd(),
-    claudeBin = process.env[CLAUDE_BIN_ENV_VAR] || 'claude',
+    claudeBin = process.env[CLAUDE_BIN_ENV_VAR] || DEFAULT_CLAUDE_BIN,
     model,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     maxDiffChars = DEFAULT_MAX_DIFF_CHARS,
@@ -229,8 +252,7 @@ export class PreCommitCodeReviewHook {
     })
 
     if (error) {
-      const hint = (error as NodeJS.ErrnoException).code === 'ENOENT' ? ` (set ${CLAUDE_BIN_ENV_VAR} to its path)` : ''
-      throw new Error(`could not run "${this.claudeBin}": ${error.message}${hint}`)
+      throw new Error(`could not run "${this.claudeBin}": ${error.message}${spawnErrorHint(error, this.claudeBin)}`)
     }
     if (status !== 0) {
       throw new Error(`claude exited with status ${status}: ${stderr.trim() || stdout.trim()}`)
