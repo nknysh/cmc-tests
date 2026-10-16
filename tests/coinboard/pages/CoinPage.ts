@@ -1,7 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
-
-/** A coin's change periods, as the "Price change" list labels them. */
-export type ChangePeriod = '1h' | '24h' | '7d' | '30d'
+import type { ChangePeriod } from '../types'
 
 /** The CoinBoard coin details page (`#/coin/<slug>`). */
 export class CoinPage {

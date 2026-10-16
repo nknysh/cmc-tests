@@ -1,39 +1,27 @@
 import { test, expect } from '@tests/coinboard/fixtures'
 import { fixtureSnapshot, withCoinChanged } from '@tests/coinboard/data/snapshot'
-import type { CoinPage, ChangePeriod } from '@tests/coinboard/pages/CoinPage'
-import type { ComparePage, Side } from '@tests/coinboard/pages/ComparePage'
+import type { CoinPage } from '@tests/coinboard/pages/CoinPage'
+import type { ComparePage } from '@tests/coinboard/pages/ComparePage'
+import {
+  CHANGE_PERIODS,
+  CHANGE_STATES,
+  COMPARE_METRICS,
+  NO_MAX_SUPPLY,
+  changeMetric,
+  isChangeState,
+} from '@tests/coinboard/types'
+import type { ChangePeriod, ChangeState, CompareMetric, Side } from '@tests/coinboard/types'
 import { Severity, severity } from '@tests/helpers/severity'
 
 // Automates app/user-stories/compare/CMP-02-comparison-shows-correct-metrics.test.md:
 // one test per test case, with the same title and severity.
 
-const METRICS = [
-  'Rank',
-  'Price',
-  'Market cap',
-  'Volume (24h)',
-  '1h change',
-  '24h change',
-  '7d change',
-  '30d change',
-  'Circulating supply',
-  'Max supply',
-] as const
-type Metric = (typeof METRICS)[number]
-
-const CHANGE_PERIODS: ChangePeriod[] = ['1h', '24h', '7d', '30d']
-const changeMetric = (period: ChangePeriod): Metric => `${period} change`
-const CHANGE_STATES = ['up', 'down', 'flat'] as const
-type ChangeState = (typeof CHANGE_STATES)[number]
-const isChangeState = (name: string): name is ChangeState => (CHANGE_STATES as readonly string[]).includes(name)
-
-const NO_MAX_SUPPLY = '∞'
-
 // Stubbed snapshot, served by the test that needs it.
 const BITCOIN_FLAT_1H = withCoinChanged(fixtureSnapshot, 'bitcoin', { percentChange1h: 0 })
 
+/** One coin's column of the comparison, as `readColumn` reads it. Only this spec reads whole columns. */
 interface CoinColumn {
-  values: Record<Metric, string>
+  values: Record<CompareMetric, string>
   states: Record<ChangePeriod, ChangeState>
 }
 
@@ -42,8 +30,8 @@ interface CoinColumn {
  * Throws if a change cell has no state, so the details page is never checked against an empty one.
  */
 async function readColumn(comparePage: ComparePage, side: Side): Promise<CoinColumn> {
-  const values = {} as Record<Metric, string>
-  for (const metric of METRICS) {
+  const values = {} as Record<CompareMetric, string>
+  for (const metric of COMPARE_METRICS) {
     values[metric] = (await comparePage.cell(metric, side).textContent())?.trim() ?? ''
   }
   const states = {} as Record<ChangePeriod, ChangeState>
@@ -72,9 +60,9 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
   test('Comparison lists the ten metrics in the specified order', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
     await comparePage.goto()
 
-    await expect(comparePage.bodyRows()).toHaveCount(METRICS.length)
-    await expect(comparePage.rowHeaders()).toHaveText([...METRICS])
-    for (const metric of METRICS) {
+    await expect(comparePage.bodyRows()).toHaveCount(COMPARE_METRICS.length)
+    await expect(comparePage.rowHeaders()).toHaveText([...COMPARE_METRICS])
+    for (const metric of COMPARE_METRICS) {
       await expect(comparePage.cell(metric, 'first')).toHaveText(/\S/)
       await expect(comparePage.cell(metric, 'second')).toHaveText(/\S/)
     }
@@ -172,7 +160,7 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     await expect(comparePage.cell('Circulating supply', 'second')).toHaveText('133,158,496')
     await expect(comparePage.cell('Max supply', 'second')).toHaveText('133,158,496')
     for (const side of ['first', 'second'] as const) {
-      for (const metric of ['Circulating supply', 'Max supply']) {
+      for (const metric of ['Circulating supply', 'Max supply'] as const) {
         await expect(comparePage.cell(metric, side)).not.toContainText(/BTC|BNB|\./)
       }
     }
@@ -190,7 +178,7 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
       await comparePage.goto('?a=bitcoin&b=tether')
       await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
       const column = await readColumn(comparePage, 'first')
-      expect(Object.values(column.values).filter(Boolean)).toHaveLength(METRICS.length)
+      expect(Object.values(column.values).filter(Boolean)).toHaveLength(COMPARE_METRICS.length)
       return column
     })
 
@@ -207,7 +195,7 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
       await comparePage.goto('?a=bitcoin&b=tether')
       await expect(comparePage.coinHeader('second')).toHaveText('Tether USDt')
       const column = await readColumn(comparePage, 'second')
-      expect(Object.values(column.values).filter(Boolean)).toHaveLength(METRICS.length)
+      expect(Object.values(column.values).filter(Boolean)).toHaveLength(COMPARE_METRICS.length)
       return column
     })
 

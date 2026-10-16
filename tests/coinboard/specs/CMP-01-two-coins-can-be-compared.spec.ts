@@ -1,20 +1,14 @@
 import { test, expect } from '@tests/coinboard/fixtures'
 import { coinLabel, fixtureSnapshot, withoutCoin, withoutCoinReranked, withTopTwoSwapped } from '@tests/coinboard/data/snapshot'
+import { BITCOIN, BNB, ETHEREUM, SAME_COIN_MESSAGE, TETHER, US_DOLLAR } from '@tests/coinboard/types'
 import { Severity, severity } from '@tests/helpers/severity'
 
 // Automates app/user-stories/compare/CMP-01-two-coins-can-be-compared.test.md: one
 // test per test case, with the same title and severity.
 
-const BITCOIN = 'Bitcoin (BTC)'
-const ETHEREUM = 'Ethereum (ETH)'
-const TETHER = 'Tether USDt (USDT)'
-const BNB = 'BNB (BNB)'
 const TOP_FOUR = [BITCOIN, ETHEREUM, TETHER, BNB]
 const LAST_COIN = 'Bitcoin SV (BSV)'
-const US_DOLLAR = 'US Dollar (USD)'
 const FIXTURE_LABELS = fixtureSnapshot.coins.map(coinLabel)
-
-const SAME_COIN_MESSAGE = 'Pick two different coins to compare.'
 
 // Stubbed snapshots, served by the tests that need them.
 const ETHEREUM_RANKED_FIRST = withTopTwoSwapped(fixtureSnapshot)

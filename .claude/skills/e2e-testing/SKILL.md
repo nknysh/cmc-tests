@@ -18,6 +18,7 @@ Read the whole file before writing or fixing E2E tests; each section below appli
 - [Test File Organization](#test-file-organization)
 - [Locators](#locators)
 - [Page Object Model (POM)](#page-object-model-pom)
+- [Shared Types and Constants](#shared-types-and-constants)
 - [Test Structure](#test-structure)
 - [Assertions](#assertions)
 - [Tags](#tags)
@@ -206,6 +207,32 @@ export const test = base.extend<{ markets: MarketsPage }>({
   },
 })
 export { expect } from '@playwright/test'
+```
+
+## Shared Types and Constants
+
+Each UI suite keeps the types, interfaces and constants its specs and page
+objects share in one `types.ts` at the suite root (`tests/coinboard/types.ts`).
+Specs and page objects import from it; they don't re-declare or re-export.
+
+- **Move it to `types.ts`** as soon as a second file needs it, or when it names
+  something the app shows on more than one page: a select label (`BITCOIN`,
+  `US_DOLLAR`), an app message (`SAME_COIN_MESSAGE`), a table's rows
+  (`COMPARE_METRICS`/`CompareMetric`), change periods and states
+  (`ChangePeriod`, `ChangeState`, `isChangeState`), a format symbol
+  (`NO_MAX_SUPPLY`), or a page-object parameter type (`Side`).
+- **Check `types.ts` first** before declaring a type or constant in a spec.
+- **Keep in the spec** what only that spec uses: values derived for its own
+  expectations (`TOP_FOUR`, `LAST_COIN`), its stub snapshots, and types tied to
+  one of its helpers (`CoinColumn` for CMP-02's `readColumn`).
+- **Stub builders** stay with the test data (`data/snapshot.ts`), not in `types.ts`.
+- Derive unions from `as const` arrays, so the list and the type can't drift,
+  and type page-object parameters with them (`cell(metric: CompareMetric, …)`)
+  so a misspelled row name fails `tsc`:
+
+```typescript
+export const CHANGE_PERIODS = ['1h', '24h', '7d', '30d'] as const
+export type ChangePeriod = (typeof CHANGE_PERIODS)[number]
 ```
 
 ## Test Structure

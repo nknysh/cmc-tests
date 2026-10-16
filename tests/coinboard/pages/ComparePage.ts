@@ -1,7 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
-
-/** Which coin select, and which coin column of the comparison. */
-export type Side = 'first' | 'second'
+import type { CompareMetric, Side } from '../types'
 
 /** The CoinBoard Compare page (`#/compare`). */
 export class ComparePage {
@@ -63,7 +61,7 @@ export class ComparePage {
   }
 
   /** One metric's value for one coin, e.g. `cell('Rank', 'first')`. */
-  cell(metric: string, side: Side): Locator {
+  cell(metric: CompareMetric, side: Side): Locator {
     const row = this.table.getByRole('row').filter({ has: this.page.getByRole('rowheader', { name: metric, exact: true }) })
     return row.getByRole('cell').nth(side === 'first' ? 0 : 1)
   }
