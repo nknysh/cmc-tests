@@ -22,9 +22,9 @@ const FALLBACK_ROWS = [
 /** A select label without its symbol, as the comparison's column header shows it: "BNB (BNB)" → "BNB". */
 const coinName = (label: string) => label.replace(/ \([^)]+\)$/, '')
 
-/** Waits until the address is `#/compare` with exactly `a` and `b`, in either order. */
+/** Waits until the address is `#/compare` with exactly one `a` and one `b`, in either order. */
 async function expectPairInAddress(comparePage: ComparePage, a: string, b: string) {
-  await expect.poll(() => comparePage.address()).toEqual({ route: '/compare', query: { a, b } })
+  await expect.poll(() => comparePage.address()).toEqual({ route: '/compare', query: [['a', a], ['b', b]] })
 }
 
 /** Checks both selects and both comparison columns show the pair, `first` on the left. */
@@ -114,8 +114,7 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
 
     await comparePage.choose('second', BNB)
     await expectPairInAddress(comparePage, 'bitcoin', 'bnb')
-    await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
-    await expect(comparePage.coinHeader('second')).toHaveText('BNB')
+    await expectPairShown(comparePage, BITCOIN, BNB)
   })
 
   test('Address naming the same coin twice shows the pick-two-different-coins message', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {

@@ -4,7 +4,8 @@ import type { CompareMetric, Side } from '../types'
 /** The route and query of a hash-routed address, e.g. `#/compare?a=bnb&b=tether`. */
 export interface HashAddress {
   route: string
-  query: Record<string, string>
+  /** Every query parameter as a `[key, value]` pair, sorted, so a repeated key shows up twice. */
+  query: [string, string][]
 }
 
 /** The CoinBoard Compare page (`#/compare`). */
@@ -39,7 +40,9 @@ export class ComparePage {
   address(): HashAddress {
     const hash = new URL(this.page.url()).hash.replace(/^#/, '')
     const [route = '', search = ''] = hash.split('?', 2)
-    return { route, query: Object.fromEntries(new URLSearchParams(search)) }
+    const byKeyThenValue = ([keyA, valueA]: [string, string], [keyB, valueB]: [string, string]) =>
+      keyA.localeCompare(keyB) || valueA.localeCompare(valueB)
+    return { route, query: [...new URLSearchParams(search)].sort(byKeyThenValue) }
   }
 
   select(side: Side): Locator {
