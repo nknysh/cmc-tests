@@ -1,18 +1,29 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { CoinMarketCapClient, RateLimiter, type ListingEntry } from '../src/clients/coinmarketcap'
 import type { Coin, MarketSnapshot, PriceHistory } from '../app/src/data/types'
+import { findInvalidPrices } from '../app/src/data/validate'
 
 /**
  * Writes the CoinBoard app's data files from one listings/latest call (1
- * credit for 100 coins):
+ * credit for 100 coins), but only when every coin's price is above 0 (APP-06):
  * - `latest.json`: the current top coins as a MarketSnapshot.
  * - `history.json`: the previous history plus this snapshot's prices, trimmed
  *   to a rolling HISTORY_WINDOW_MS, for the coin page's price chart.
+ * - `previous.json` / `previous-history.json`: copies of the two above. They're
+ *   the last snapshot this script confirmed, which the app falls back to if the
+ *   published latest.json has an invalid price anyway (e.g. a manual edit).
+ *   Only this script writes them, so an unconfirmed file never becomes one.
+ *
+ * A snapshot with any price of 0 or below is rejected whole: nothing is
+ * written, the rejection is logged, and the run still succeeds, so the last
+ * accepted snapshot stays published and no other alert is raised. On GitHub
+ * Actions, the step output `accepted` is `true` or `false`.
  *
  * Usage: tsx scripts/snapshot-listings.ts [outDir] [previousHistoryPath]
  * The previous history is read from a separate path so a run never appends
  * live prices to the synthetic fixture history committed in app/public/data.
+ * Pass the deployed previous-history.json: it holds confirmed prices only.
  * Without one (the first deploy), history starts from this snapshot alone.
  */
 
@@ -69,6 +80,12 @@ function appendToHistory(history: PriceHistory, snapshot: MarketSnapshot): Price
   return { points: [...kept, { t: snapshot.updatedAt, prices }] }
 }
 
+/** Tells a GitHub Actions workflow whether the snapshot was accepted. A no-op elsewhere. */
+async function setAcceptedOutput(accepted: boolean): Promise<void> {
+  const outputFile = process.env.GITHUB_OUTPUT
+  if (outputFile) await appendFile(outputFile, `accepted=${accepted}\n`)
+}
+
 async function main(): Promise<void> {
   const [outDir = DEFAULT_OUT_DIR, previousHistoryPath] = process.argv.slice(2)
   const apiKey = process.env.CMC_API_KEY
@@ -84,13 +101,29 @@ async function main(): Promise<void> {
   })
 
   const snapshot: MarketSnapshot = { updatedAt: timestamp, coins: entries.map(toCoin) }
+
+  const invalid = findInvalidPrices(snapshot)
+  if (invalid.length > 0) {
+    const prices = invalid.map((coin) => `${coin.symbol} (${coin.price})`).join(', ')
+    console.log(
+      `[snapshot-listings] rejected the snapshot taken at ${snapshot.updatedAt}: ${invalid.length} coin(s) priced at 0 or below: ${prices}. Nothing was written; the last accepted snapshot stays published.`,
+    )
+    await setAcceptedOutput(false)
+    return
+  }
+
   const history = appendToHistory(await readHistory(previousHistoryPath), snapshot)
+  const snapshotJson = `${JSON.stringify(snapshot)}\n`
+  const historyJson = `${JSON.stringify(history)}\n`
 
   await mkdir(outDir, { recursive: true })
-  await writeFile(path.join(outDir, 'latest.json'), `${JSON.stringify(snapshot)}\n`)
-  await writeFile(path.join(outDir, 'history.json'), `${JSON.stringify(history)}\n`)
+  await writeFile(path.join(outDir, 'latest.json'), snapshotJson)
+  await writeFile(path.join(outDir, 'history.json'), historyJson)
+  await writeFile(path.join(outDir, 'previous.json'), snapshotJson)
+  await writeFile(path.join(outDir, 'previous-history.json'), historyJson)
+  await setAcceptedOutput(true)
   console.log(
-    `[snapshot-listings] wrote ${snapshot.coins.length} coins and ${history.points.length} history points to ${outDir} (${creditCount} credit)`,
+    `[snapshot-listings] accepted ${snapshot.coins.length} coins and wrote them with ${history.points.length} history points to ${outDir} (${creditCount} credit)`,
   )
 }
 

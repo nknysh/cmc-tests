@@ -40,26 +40,51 @@ jobs:
       - run: npm ci --ignore-scripts
         working-directory: app
 
-      # The chart's price history accumulates across runs in the deployed history.json.
-      - name: Restore deployed price history
+      # The deployed data: the chart's price history accumulates across runs,
+      # and a rejected snapshot rebuilds the app with this data as it is.
+      - name: Restore deployed app data
         continue-on-error: true
         uses: actions/checkout@v7
         with:
           ref: gh-pages
           path: gh-pages
 
-      # Overwrites the committed fixtures in app/public/data with live data. A
-      # failed call fails the job before publishing, so the last deploy stays up.
+      # Overwrites the committed fixtures in app/public/data with live data, but
+      # only when every price is above 0 (APP-06). A rejected snapshot is only
+      # logged and the step still succeeds (accepted=false), so no alert fires.
+      # A failed call fails the job before publishing, so the last deploy stays up.
       - name: Snapshot CoinMarketCap listings
-        run: ./node_modules/.bin/tsx scripts/snapshot-listings.ts app/public/data gh-pages/app/data/history.json
+        id: snapshot
+        run: |
+          # Confirmed prices only. Deploys from before APP-06 have just history.json.
+          history=gh-pages/app/data/previous-history.json
+          [ -f "$history" ] || history=gh-pages/app/data/history.json
+          ./node_modules/.bin/tsx scripts/snapshot-listings.ts app/public/data "$history"
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
 
+      # Rejected: rebuild with the data already deployed (an app change still
+      # ships), never with the committed fixtures. With nothing deployed yet,
+      # there's no accepted snapshot to show, so nothing is published.
+      - name: Keep deployed data after a rejected snapshot
+        id: data
+        if: steps.snapshot.outputs.accepted != 'true'
+        run: |
+          if [ ! -f gh-pages/app/data/latest.json ]; then
+            echo "No accepted snapshot has been deployed yet, so there's nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          rm -f app/public/data/*.json
+          cp gh-pages/app/data/*.json app/public/data/
+
       - name: Build app
+        if: steps.data.outputs.publish != 'false'
         run: npm run build
         working-directory: app
 
       - name: Publish app to gh-pages
+        if: steps.data.outputs.publish != 'false'
         run: |
           git fetch origin gh-pages:gh-pages 2>/dev/null || git worktree add --orphan -b gh-pages _pages
           [ -d _pages ] || git worktree add _pages gh-pages

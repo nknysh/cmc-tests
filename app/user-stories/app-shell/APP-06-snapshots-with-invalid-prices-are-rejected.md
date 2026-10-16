@@ -24,6 +24,4 @@
 
 ## Known gaps
 
-- AC-1 to AC-3, AC-6: the snapshot step doesn't check prices; a coin priced at 0 or below is published and added to price history.
-- AC-7: only the latest snapshot and price history are published; no previous snapshot is kept.
-- AC-8 to AC-11: the app doesn't check prices; it shows them as loaded.
+None. The snapshot step (`scripts/snapshot-listings.ts`, `.github/workflows/app-deploy.yml`) covers AC-1 to AC-7. The app (`app/src/data/MarketData.tsx`, `app/src/components/Price.tsx`) covers AC-8 to AC-11.

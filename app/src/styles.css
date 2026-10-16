@@ -664,6 +664,23 @@ dialog::backdrop {
   margin-top: 16px;
 }
 
+/* A price of 0 or below in a previous snapshot that was shown anyway (APP-06/AC-11). */
+.invalid-price {
+  color: var(--down);
+  font-weight: 600;
+}
+
+.invalid-price-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 6px;
+  border: 1px solid var(--down);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
 .danger {
   background: var(--down);
   border-color: var(--down);
