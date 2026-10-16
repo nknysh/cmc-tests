@@ -52,6 +52,16 @@ export class ComparePage {
     return this.columnHeaders.nth(side === 'first' ? 1 : 2)
   }
 
+  /** The comparison's metric rows, top to bottom. */
+  bodyRows(): Locator {
+    return this.table.locator('tbody').getByRole('row')
+  }
+
+  /** The metric names heading each row, top to bottom. */
+  rowHeaders(): Locator {
+    return this.table.getByRole('rowheader')
+  }
+
   /** One metric's value for one coin, e.g. `cell('Rank', 'first')`. */
   cell(metric: string, side: Side): Locator {
     const row = this.table.getByRole('row').filter({ has: this.page.getByRole('rowheader', { name: metric, exact: true }) })

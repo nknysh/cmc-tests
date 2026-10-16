@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import type { MarketSnapshot } from '../../../app/src/data/types'
+import type { Coin, MarketSnapshot } from '../../../app/src/data/types'
 import { findInvalidPrices } from '../../../app/src/data/validate'
 
 const FIXTURE_PATH = path.join(__dirname, '../../../app/public/data/latest.json')
@@ -45,6 +45,12 @@ export function withTopTwoSwapped(snapshot: MarketSnapshot): MarketSnapshot {
   const [first, second, ...rest] = snapshot.coins
   if (!first || !second) throw new Error('withTopTwoSwapped needs a snapshot with at least two coins')
   return { ...snapshot, coins: [{ ...second, rank: 1 }, { ...first, rank: 2 }, ...rest] }
+}
+
+/** The snapshot with some fields of one coin replaced. Prices must stay above 0, or APP-06 rejects it. */
+export function withCoinChanged(snapshot: MarketSnapshot, slug: string, changes: Partial<Omit<Coin, 'price'>>): MarketSnapshot {
+  if (!snapshot.coins.some((coin) => coin.slug === slug)) throw new Error(`withCoinChanged: no coin with slug ${slug}`)
+  return { ...snapshot, coins: snapshot.coins.map((coin) => (coin.slug === slug ? { ...coin, ...changes } : coin)) }
 }
 
 /** A coin's label in the app's coin selects, e.g. "Bitcoin (BTC)". */

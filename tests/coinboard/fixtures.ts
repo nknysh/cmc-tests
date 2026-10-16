@@ -2,6 +2,7 @@ import { test as base } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import type { MarketSnapshot } from '../../app/src/data/types'
 import { fixtureSnapshot } from './data/snapshot'
+import { CoinPage } from './pages/CoinPage'
 import { ComparePage } from './pages/ComparePage'
 
 const LATEST_SNAPSHOT_URL = '**/data/latest.json'
@@ -19,6 +20,7 @@ interface CoinBoardFixtures {
    */
   expectedBrowserErrors: RegExp[]
   comparePage: ComparePage
+  coinPage: CoinPage
 }
 
 /** Uncaught page errors and `console.error` messages since the page opened, across navigations. */
@@ -53,6 +55,9 @@ export const test = base.extend<CoinBoardFixtures>({
   },
   comparePage: async ({ page }, use) => {
     await use(new ComparePage(page))
+  },
+  coinPage: async ({ page }, use) => {
+    await use(new CoinPage(page))
   },
 })
 
