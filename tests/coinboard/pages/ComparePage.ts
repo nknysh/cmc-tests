@@ -18,7 +18,7 @@ export class ComparePage {
     this.firstCoin = page.getByLabel('First coin', { exact: true })
     this.secondCoin = page.getByLabel('Second coin', { exact: true })
     this.table = page.getByRole('table', { name: 'Coin comparison' })
-    this.columnHeaders = page.getByRole('columnheader').within(this.table)
+    this.columnHeaders = this.table.getByRole('columnheader')
     this.alert = page.getByRole('alert')
   }
 
