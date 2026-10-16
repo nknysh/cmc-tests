@@ -16,6 +16,11 @@ const FIXTURE_LABELS = fixtureSnapshot.coins.map(coinLabel)
 
 const SAME_COIN_MESSAGE = 'Pick two different coins to compare.'
 
+// Stubbed snapshots, served by the tests that need them.
+const ETHEREUM_RANKED_FIRST = withTopTwoSwapped(fixtureSnapshot)
+const WITHOUT_BITCOIN = withoutCoinReranked(fixtureSnapshot, 'bitcoin')
+const WITHOUT_BNB = withoutCoin(fixtureSnapshot, 'bnb')
+
 test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'] }, () => {
   test('User sees the Compare coins page with First coin and Second coin choices', { annotation: severity(Severity.BLOCKER) }, async ({ comparePage }) => {
     await comparePage.goto()
@@ -61,30 +66,24 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.coinHeader('second')).toHaveText('Ethereum')
   })
 
-  test.describe('with Ethereum ranked above Bitcoin', () => {
-    test.use({ snapshot: withTopTwoSwapped(fixtureSnapshot) })
+  test('Default pair follows the ranking when Ethereum is ranked above Bitcoin', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, serveSnapshot }) => {
+    await serveSnapshot(ETHEREUM_RANKED_FIRST)
+    await comparePage.goto()
 
-    test('Default pair follows the ranking when Ethereum is ranked above Bitcoin', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
-      await comparePage.goto()
-
-      await expect(comparePage.selectedOption('first')).toHaveText(ETHEREUM)
-      await expect(comparePage.selectedOption('second')).toHaveText(BITCOIN)
-      await expect(comparePage.coinHeader('first')).toHaveText('Ethereum')
-    })
+    await expect(comparePage.selectedOption('first')).toHaveText(ETHEREUM)
+    await expect(comparePage.selectedOption('second')).toHaveText(BITCOIN)
+    await expect(comparePage.coinHeader('first')).toHaveText('Ethereum')
   })
 
-  test.describe('with Bitcoin not in the snapshot', () => {
-    test.use({ snapshot: withoutCoinReranked(fixtureSnapshot, 'bitcoin') })
+  test('Default pair follows the ranking when Bitcoin is not in the snapshot', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, serveSnapshot }) => {
+    await serveSnapshot(WITHOUT_BITCOIN)
+    await comparePage.goto()
 
-    test('Default pair follows the ranking when Bitcoin is not in the snapshot', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
-      await comparePage.goto()
-
-      await expect(comparePage.selectedOption('first')).toHaveText(ETHEREUM)
-      await expect(comparePage.selectedOption('second')).toHaveText(TETHER)
-      await expect(comparePage.coinHeader('first')).toHaveText('Ethereum')
-      await expect(comparePage.coinHeader('second')).toHaveText('Tether USDt')
-      await expect(comparePage.alert).toHaveCount(0)
-    })
+    await expect(comparePage.selectedOption('first')).toHaveText(ETHEREUM)
+    await expect(comparePage.selectedOption('second')).toHaveText(TETHER)
+    await expect(comparePage.coinHeader('first')).toHaveText('Ethereum')
+    await expect(comparePage.coinHeader('second')).toHaveText('Tether USDt')
+    await expect(comparePage.alert).toHaveCount(0)
   })
 
   test('User can change the First coin and see the comparison update at once', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, page }) => {
@@ -164,46 +163,46 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     })
   })
 
-  test.describe('with BNB not in the snapshot', () => {
-    test.use({ snapshot: withoutCoin(fixtureSnapshot, 'bnb') })
+  test('Missing First coin falls back to the top-ranked coin', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, serveSnapshot }) => {
+    await serveSnapshot(WITHOUT_BNB)
+    await comparePage.goto('?a=bnb&b=tether')
 
-    test('Missing First coin falls back to the top-ranked coin', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
-      await comparePage.goto('?a=bnb&b=tether')
+    await expect(comparePage.selectedOption('first')).toHaveText(BITCOIN)
+    await expect(comparePage.selectedOption('second')).toHaveText(TETHER)
+    await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
+    await expect(comparePage.coinHeader('second')).toHaveText('Tether USDt')
+    await expect(comparePage.alert).toHaveCount(0)
+  })
 
-      await expect(comparePage.selectedOption('first')).toHaveText(BITCOIN)
-      await expect(comparePage.selectedOption('second')).toHaveText(TETHER)
-      await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
-      await expect(comparePage.coinHeader('second')).toHaveText('Tether USDt')
-      await expect(comparePage.alert).toHaveCount(0)
-    })
+  test('Missing Second coin falls back to the second-ranked coin', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, serveSnapshot }) => {
+    await serveSnapshot(WITHOUT_BNB)
+    await comparePage.goto('?a=tether&b=bnb')
 
-    test('Missing Second coin falls back to the second-ranked coin', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
-      await comparePage.goto('?a=tether&b=bnb')
+    await expect(comparePage.selectedOption('first')).toHaveText(TETHER)
+    await expect(comparePage.selectedOption('second')).toHaveText(ETHEREUM)
+    await expect(comparePage.coinHeader('first')).toHaveText('Tether USDt')
+    await expect(comparePage.coinHeader('second')).toHaveText('Ethereum')
+    await expect(comparePage.alert).toHaveCount(0)
+  })
 
-      await expect(comparePage.selectedOption('first')).toHaveText(TETHER)
-      await expect(comparePage.selectedOption('second')).toHaveText(ETHEREUM)
-      await expect(comparePage.coinHeader('first')).toHaveText('Tether USDt')
-      await expect(comparePage.coinHeader('second')).toHaveText('Ethereum')
-      await expect(comparePage.alert).toHaveCount(0)
-    })
+  test('Same missing coin chosen twice falls back to the default pair', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, serveSnapshot }) => {
+    await serveSnapshot(WITHOUT_BNB)
+    await comparePage.goto('?a=bnb&b=bnb')
 
-    test('Same missing coin chosen twice falls back to the default pair', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
-      await comparePage.goto('?a=bnb&b=bnb')
+    await expect(comparePage.selectedOption('first')).toHaveText(BITCOIN)
+    await expect(comparePage.selectedOption('second')).toHaveText(ETHEREUM)
+    await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
+    await expect(comparePage.coinHeader('second')).toHaveText('Ethereum')
+    await expect(comparePage.alert).toHaveCount(0)
+  })
 
-      await expect(comparePage.selectedOption('first')).toHaveText(BITCOIN)
-      await expect(comparePage.selectedOption('second')).toHaveText(ETHEREUM)
-      await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
-      await expect(comparePage.coinHeader('second')).toHaveText('Ethereum')
-      await expect(comparePage.alert).toHaveCount(0)
-    })
+  test("Fallback to the other choice's coin shows the pick-two-different-coins message", { annotation: severity(Severity.MINOR) }, async ({ comparePage, serveSnapshot }) => {
+    await serveSnapshot(WITHOUT_BNB)
+    await comparePage.goto('?a=bnb&b=bitcoin')
 
-    test("Fallback to the other choice's coin shows the pick-two-different-coins message", { annotation: severity(Severity.MINOR) }, async ({ comparePage }) => {
-      await comparePage.goto('?a=bnb&b=bitcoin')
-
-      await expect(comparePage.alert).toHaveText(SAME_COIN_MESSAGE)
-      await expect(comparePage.table).toHaveCount(0)
-      await expect(comparePage.selectedOption('first')).toHaveText(BITCOIN)
-      await expect(comparePage.selectedOption('second')).toHaveText(BITCOIN)
-    })
+    await expect(comparePage.alert).toHaveText(SAME_COIN_MESSAGE)
+    await expect(comparePage.table).toHaveCount(0)
+    await expect(comparePage.selectedOption('first')).toHaveText(BITCOIN)
+    await expect(comparePage.selectedOption('second')).toHaveText(BITCOIN)
   })
 })

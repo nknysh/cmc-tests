@@ -4,9 +4,15 @@ import type { MarketSnapshot } from '../../app/src/data/types'
 import { fixtureSnapshot } from './data/snapshot'
 import { ComparePage } from './pages/ComparePage'
 
+const LATEST_SNAPSHOT_URL = '**/data/latest.json'
+
 interface CoinBoardFixtures {
-  /** The snapshot served as `data/latest.json`. Override with `test.use({ snapshot })` for a stub. */
-  snapshot: MarketSnapshot
+  /**
+   * Serves a stub as `data/latest.json` in place of the committed fixture, which
+   * every test gets by default. Call it before opening a page: the app reads the
+   * snapshot once, when it loads.
+   */
+  serveSnapshot: (snapshot: MarketSnapshot) => Promise<void>
   /**
    * Browser errors a test expects, e.g. the failed request of a load-failure test.
    * Any other uncaught page error or `console.error` fails the test.
@@ -25,10 +31,9 @@ async function browserErrors(page: Page): Promise<string[]> {
 }
 
 export const test = base.extend<CoinBoardFixtures>({
-  snapshot: [fixtureSnapshot, { option: true }],
   expectedBrowserErrors: [[], { option: true }],
-  page: async ({ page, snapshot, expectedBrowserErrors }, use, testInfo) => {
-    await page.route('**/data/latest.json', (route) => route.fulfill({ json: snapshot }))
+  page: async ({ page, expectedBrowserErrors }, use, testInfo) => {
+    await page.route(LATEST_SNAPSHOT_URL, (route) => route.fulfill({ json: fixtureSnapshot }))
     await use(page)
 
     // Checked after the test, so an app error fails it even when every assertion passed.
@@ -39,6 +44,12 @@ export const test = base.extend<CoinBoardFixtures>({
     if (unexpected.length > 0) {
       throw new Error(`The app logged ${unexpected.length} unexpected browser error(s):\n${unexpected.join('\n')}`)
     }
+  },
+  serveSnapshot: async ({ page }, use) => {
+    await use(async (snapshot) => {
+      await page.unroute(LATEST_SNAPSHOT_URL)
+      await page.route(LATEST_SNAPSHOT_URL, (route) => route.fulfill({ json: snapshot }))
+    })
   },
   comparePage: async ({ page }, use) => {
     await use(new ComparePage(page))
