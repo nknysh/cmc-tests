@@ -27,8 +27,10 @@ function selectedProjects(argv: readonly string[]): string[] {
   })
 }
 const projectFilters = selectedProjects(process.argv)
-// A filter can be a glob (`--project="*"`), so any wildcard counts as including coinboard.
-const runsCoinboard = projectFilters.length === 0 || projectFilters.some((name) => name === 'coinboard' || name.includes('*'))
+// Playwright matches filters case-insensitively, and a filter can be a glob
+// (`--project="*"`), so any wildcard counts as including coinboard.
+const runsCoinboard =
+  projectFilters.length === 0 || projectFilters.some((name) => name.toLowerCase() === 'coinboard' || name.includes('*'))
 const startCoinboard = runsCoinboard && !process.env.COINBOARD_URL
 
 export default defineConfig({
