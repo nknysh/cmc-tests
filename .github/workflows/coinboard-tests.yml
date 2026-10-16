@@ -1,0 +1,115 @@
+name: CoinBoard UI Tests
+
+# Runs every CoinBoard UI spec (tests/coinboard, the `coinboard` Playwright
+# project) against the app's Vite dev server, which the config starts. Specs
+# serve their own snapshot via page.route, so no CMC_API_KEY is needed.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'tests/coinboard/**'
+      - 'tests/helpers/**'
+      - 'playwright.config.ts'
+      - 'allurerc.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/coinboard-tests.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'tests/coinboard/**'
+      - 'tests/helpers/**'
+      - 'playwright.config.ts'
+      - 'allurerc.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/coinboard-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Runs that publish share the gh-pages publisher group: one at a time, since
+# each workflow pushes to the same branch. Pull requests don't publish, so each
+# gets its own group and a newer push cancels the older run.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('coinboard-tests-{0}', github.ref) || 'gh-pages-publish' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  coinboard:
+    runs-on: ubuntu-latest
+    # Own Allure suite (results/report/history, see allurerc.mjs). It also makes
+    # playwright.config.ts start the app's dev server.
+    env:
+      ALLURE_SUITE: coinboard
+      SKIP_BTC_PRICE_HEAL: '1'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - run: npm ci --ignore-scripts
+
+      # The dev server runs from app/, which has its own dependencies.
+      - run: npm ci --ignore-scripts
+        working-directory: app
+
+      - run: ./node_modules/.bin/playwright install --with-deps chromium
+
+      # Restored before the tests: `allure run` builds the report (and appends
+      # history) as soon as they finish.
+      - name: Restore Allure history
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Copy Allure history
+        run: |
+          mkdir -p allure-history
+          cp "gh-pages/allure-history/$ALLURE_SUITE.jsonl" allure-history/ 2>/dev/null || true
+
+      # `allure run` exits with the coinboard quality gate's result (allurerc.mjs).
+      - name: Run CoinBoard UI tests
+        run: ./node_modules/.bin/allure run -- ./node_modules/.bin/playwright test --project=coinboard
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-coinboard
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-coinboard
+          path: allure-results/coinboard/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Publish Allure report to gh-pages
+        if: always() && github.event_name != 'pull_request'
+        run: |
+          [ -d "allure-report/$ALLURE_SUITE" ] || exit 0
+          git fetch origin gh-pages:gh-pages 2>/dev/null || git worktree add --orphan -b gh-pages _pages
+          [ -d _pages ] || git worktree add _pages gh-pages
+          rm -rf "_pages/$ALLURE_SUITE"
+          mkdir -p "_pages/$ALLURE_SUITE" _pages/allure-history
+          cp -r "allure-report/$ALLURE_SUITE/." "_pages/$ALLURE_SUITE/"
+          cp "allure-history/$ALLURE_SUITE.jsonl" _pages/allure-history/
+          cp .github/allure-summary/index.html _pages/index.html
+          cd _pages
+          git add -A
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -m "Allure report (coinboard)" || exit 0
+          git push origin gh-pages

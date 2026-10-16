@@ -7,6 +7,14 @@ const allureSuite = process.env.ALLURE_SUITE || 'adhoc'
 
 const liveCmcProject = { workers: 1, timeout: 90_000 }
 
+// CoinBoard UI tests (tests/coinboard) target the app in app/. The coinboard suite
+// starts its Vite dev server; set COINBOARD_URL to test an app that's already running
+// or deployed instead. Only that suite starts it, since other suites' CI jobs don't
+// install the app's dependencies.
+const COINBOARD_DEV_URL = 'http://localhost:5173/cmc-tests/app/'
+const coinboardUrl = process.env.COINBOARD_URL || COINBOARD_DEV_URL
+const startCoinboard = allureSuite === 'coinboard' && !process.env.COINBOARD_URL
+
 export default defineConfig({
   globalSetup: './.agents/btc-price-window/self-heal-btc-price-window.ts',
   fullyParallel: true,
@@ -44,5 +52,13 @@ export default defineConfig({
     { name: 'contract', testDir: './tests/contract', ...liveCmcProject },
     { name: 'btc-price', testDir: './tests/api', testMatch: '**/btc-price.spec.ts', ...liveCmcProject },
     { name: 'e2e', testDir: './tests/e2e', use: { ...devices['Desktop Chrome'] } },
+    { name: 'coinboard', testDir: './tests/coinboard', use: { ...devices['Desktop Chrome'], baseURL: coinboardUrl } },
   ],
+  ...(startCoinboard && {
+    webServer: {
+      command: 'npm run dev --prefix app -- --port 5173 --strictPort',
+      url: COINBOARD_DEV_URL,
+      reuseExistingServer: !process.env.CI,
+    },
+  }),
 })
