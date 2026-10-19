@@ -17,5 +17,5 @@
       "@agents/*": ["./.agents/*"]
     }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", ".agents/**/*.ts", ".agents/**/*.mts", "playwright.config.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "tests/**/*.mts", "scripts/**/*.ts", ".agents/**/*.ts", ".agents/**/*.mts", "playwright.config.ts"]
 }

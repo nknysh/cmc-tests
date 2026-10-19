@@ -2,7 +2,7 @@ import { test as base } from '@playwright/test'
 import type { Page, TestInfo } from '@playwright/test'
 import type { MarketSnapshot } from '../../app/src/data/types'
 import { fixtureSnapshot } from './data/snapshot'
-import { DOM_SNAPSHOT_ATTACHMENT, DOM_SNAPSHOT_MAX_LENGTH, serializeElement } from './domSnapshot'
+import { DOM_SNAPSHOT_ATTACHMENT, DOM_SNAPSHOT_MAX_LENGTH, serializeElement } from './domSnapshot.mts'
 import { CoinPage } from './pages/CoinPage'
 import { ComparePage } from './pages/ComparePage'
 

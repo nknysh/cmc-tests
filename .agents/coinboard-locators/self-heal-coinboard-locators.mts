@@ -11,6 +11,9 @@ import type {
 } from '@playwright/test/reporter'
 import { promptLocalModel } from '../shared/localModel.mts'
 import { auditChange, reportAuditBlock } from '../self-heal-commit-auditor/auditChange.mts'
+// The attachment the coinboard `page` fixture adds to every failing test. An
+// .mts module, so both Playwright and this plain-node script can import it.
+import { DOM_SNAPSHOT_ATTACHMENT } from '../../tests/coinboard/domSnapshot.mts'
 
 // Assumes invocation from the repo root (true for both the CI workflow and
 // local `node .agents/coinboard-locators/self-heal-coinboard-locators.mts`).
@@ -21,9 +24,6 @@ const ALLURE_SUITE = 'coinboard'
 const ALLURE_RESULTS_DIR = path.join(REPO_ROOT, 'allure-results', ALLURE_SUITE)
 const PLAYWRIGHT_BIN = path.join(REPO_ROOT, 'node_modules/.bin/playwright')
 const CI_GIT_IDENTITY = ['-c', 'user.name=nknysh', '-c', 'user.email=nknysh@gmail.com']
-// Must match DOM_SNAPSHOT_ATTACHMENT in tests/coinboard/domSnapshot.ts, which
-// the coinboard `page` fixture attaches to every failing test.
-const DOM_SNAPSHOT_ATTACHMENT = 'dom snapshot'
 // Page objects the heal may patch, keyed by the fixture that provides each
 // one (tests/coinboard/fixtures.ts). A failing spec implicates the page
 // objects whose fixtures it uses.
@@ -91,16 +91,18 @@ function runCoinboardTests(): TestRun {
   }
 
   const report: JSONReport = JSON.parse(fs.readFileSync(JSON_REPORT_PATH, 'utf-8'))
-  // Deduped by title: CI retries report the same failure once per attempt. The
+  // Deduped per test: CI retries report the same failure once per attempt. The
   // last attempt wins, so a test that passed on retry isn't counted as failed.
+  // Keyed by file and title, since two specs can share a test title.
   const outcomes = new Map<string, TestFailure | undefined>()
 
   const walk = (suite: JSONReportSuite): void => {
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
+        const key = `${spec.file}::${spec.title}`
         for (const result of test.results ?? []) {
-          if (result.status === 'passed') outcomes.set(spec.title, undefined)
-          else if (result.status !== 'skipped') outcomes.set(spec.title, toFailure(spec, result, report.config.rootDir))
+          if (result.status === 'passed') outcomes.set(key, undefined)
+          else if (result.status !== 'skipped') outcomes.set(key, toFailure(spec, result, report.config.rootDir))
         }
       }
     }

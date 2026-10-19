@@ -7,7 +7,7 @@ export const DOM_SNAPSHOT_MAX_LENGTH = 20_000
  * Serializes an element's tag, the attributes locators key off and its direct text, for the
  * CoinBoard locator self-heal (`.agents/coinboard-locators/`). An ARIA snapshot alone drops the
  * `data-testid` and `for` attributes some page object locators use. Class and style are left
- * out as noise. It runs in the browser via `locator.evaluate`, so it must stay self-contained.
+ * out as noise. This is an `.mts` module so the heal script, run by plain node, can import it. It runs in the browser via `locator.evaluate`, so it must stay self-contained.
  */
 export function serializeElement(root: Element): string {
   const KEEP_ATTRS = /^(data-|aria-|role$|id$|href$|for$|name$|type$|value$|selected$|disabled$)/
@@ -20,7 +20,8 @@ export function serializeElement(root: Element): string {
     if (tag === 'script' || tag === 'style' || tag === 'svg') return `<${tag}></${tag}>`
     const attrs = Array.from(el.attributes)
       .filter((a) => KEEP_ATTRS.test(a.name))
-      .map((a) => `${a.name}="${a.value}"`)
+      // Escaped so a quote in a value (e.g. an aria-label) can't break the markup.
+      .map((a) => `${a.name}="${a.value.replaceAll('&', '&amp;').replaceAll('"', '&quot;')}"`)
       .join(' ')
     const openTag = attrs ? `<${tag} ${attrs}>` : `<${tag}>`
     const directText = Array.from(el.childNodes)
