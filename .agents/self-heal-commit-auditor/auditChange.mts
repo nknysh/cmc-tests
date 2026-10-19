@@ -5,7 +5,7 @@ const VERDICT_LINE = /^VERDICT:\s*(PASS|CRITICAL)\b/i
 
 // Local models are less reliable than Claude about honoring a strict output
 // format - constrain it to a single parseable first line, same tactic as the
-// navigation heal's stripCodeFence for its own local-model output.
+// CoinBoard locator heal's stripCodeFence for its own local-model output.
 const FORMAT_INSTRUCTION =
   'Reply with a first line that is EXACTLY "VERDICT: PASS" or "VERDICT: CRITICAL", ' +
   'followed by a short paragraph explaining why. No markdown, no other text before the verdict line.'
@@ -14,11 +14,13 @@ export async function auditChange(params: {
   systemPrompt: string
   userPrompt: string
   contextSize?: number
+  maxTokens?: number
 }): Promise<{ critical: boolean; reasoning: string }> {
   const response = await promptLocalModel({
     systemPrompt: `${params.systemPrompt} ${FORMAT_INSTRUCTION}`,
     userPrompt: params.userPrompt,
     contextSize: params.contextSize,
+    maxTokens: params.maxTokens,
   })
 
   const match = response.trim().match(VERDICT_LINE)

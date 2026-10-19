@@ -174,7 +174,7 @@ re-run in debug mode:
 - **API tests** (`tests/api/`) — fast, no browser, verify a client's
   contract against a real (or realistic) backend. Best for data
   correctness, error handling, and edge cases in request/response shape.
-- **E2E tests** (`tests/e2e/`) — slower, verify what a user actually
+- **E2E/UI tests** (`tests/coinboard/`) — slower, verify what a user actually
   experiences through the UI. Reserve these for flows that meaningfully
   exercise the browser (navigation, rendering, interaction) rather than
   re-testing logic already covered by an API test.
@@ -239,7 +239,7 @@ test(
 - **blocker**: the suite's results can't be trusted, e.g. the provider
   changed its contract, auth is broken, or the BTC price window is breached.
 - **critical**: a core happy path, e.g. resolving an asset by id or slug,
-  a consumer contract mapping, or homepage navigation.
+  a consumer contract mapping, or comparing two coins in CoinBoard.
 - **normal**: validation, error envelopes, parameter combinations and edge
   cases.
 - **minor/trivial**: formatting, rounding, and credit accounting.
@@ -247,4 +247,4 @@ test(
 The severity decides whether a failure breaks CI. The quality gate in
 `allurerc.mjs` fails on any blocker/critical failure, but tolerates a few
 failures at lower severities. So give tests in suites where any failure
-must stop the pipeline (btc-price, navigation) blocker or critical.
+must stop the pipeline (btc-price) blocker or critical.

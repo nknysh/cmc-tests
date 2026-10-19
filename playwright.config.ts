@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 import 'dotenv/config'
 
-// Each suite (btc-price, api, navigation) writes to its own Allure results dir so
+// Each suite (btc-price, api, contract, coinboard, ...) writes to its own Allure results dir so
 // one suite's report never shows another's results. Unset → an 'adhoc' bucket.
 const allureSuite = process.env.ALLURE_SUITE || 'adhoc'
 
@@ -51,7 +51,7 @@ export default defineConfig({
         CI: String(!!process.env.CI),
       },
     }],
-    // The navigation heal script reads a JSON report; it sets this env var.
+    // The CoinBoard locator heal script reads a JSON report; it sets this env var.
     ...(process.env.PLAYWRIGHT_JSON_OUTPUT_NAME ? [['json'] as const] : []),
   ],
   use: {
@@ -69,7 +69,6 @@ export default defineConfig({
     { name: 'api', testDir: './tests/api', testIgnore: '**/btc-price.spec.ts', ...liveCmcProject },
     { name: 'contract', testDir: './tests/contract', ...liveCmcProject },
     { name: 'btc-price', testDir: './tests/api', testMatch: '**/btc-price.spec.ts', ...liveCmcProject },
-    { name: 'e2e', testDir: './tests/e2e', use: { ...devices['Desktop Chrome'] } },
     { name: 'coinboard', testDir: './tests/coinboard', use: { ...devices['Desktop Chrome'], baseURL: coinboardUrl } },
   ],
   ...(startCoinboard && {

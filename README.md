@@ -32,7 +32,6 @@ The specs in `tests/coinboard/` run in their own Playwright project, `coinboard`
 | API tests (simple price, quotes latest) | https://nknysh.github.io/cmc-tests/api/ |
 | Contract tests | https://nknysh.github.io/cmc-tests/contract/ |
 | BTC price window | https://nknysh.github.io/cmc-tests/btc-price/ |
-| Navigation e2e | https://nknysh.github.io/cmc-tests/navigation/ |
 | CoinBoard UI tests | https://nknysh.github.io/cmc-tests/coinboard/ |
 | Performance baseline (k6) | https://nknysh.github.io/cmc-tests/perf/ |
 
@@ -47,11 +46,11 @@ Each suite also has an Allure quality gate (`allurerc.mjs`). It fails the run on
 - Node.js 24+
 
 **Testing**
-- [Playwright Test](https://playwright.dev) for API specs (no browser) and browser E2E specs (Desktop Chrome)
+- [Playwright Test](https://playwright.dev) for API specs (no browser) and browser UI specs against the CoinBoard app (Desktop Chrome)
 - UI tests for the CoinBoard demo app, with stubbed snapshot data and a check that fails tests on browser errors
 - Contract tests with [zod](https://zod.dev) schemas: live provider checks against the CoinMarketCap API, and offline consumer checks of the client against recorded fixtures
 - [k6](https://grafana.com/docs/k6/) latency baseline for the CoinMarketCap API (not a load test: the Basic key allows 30 requests a minute)
-- Page Object Model for E2E tests
+- Page Object Model for the CoinBoard UI tests
 - Typed HTTP clients for third-party APIs (CoinMarketCap client in `src/clients/`)
 
 **Reporting**
@@ -65,13 +64,12 @@ Each suite also has an Allure quality gate (`allurerc.mjs`). It fails the run on
 - SonarQube Cloud static analysis on every push to `main` and every PR, failing the check when the quality gate fails
 
 **CI/CD**
-- GitHub Actions: scheduled and manually triggered workflows for API and contract tests, the k6 performance baseline, the BTC price window, and navigation E2E
-- GitHub Actions: CoinBoard UI tests on every push and pull request that touches the app or its tests, and a daily CoinBoard deploy
+- GitHub Actions: scheduled and manually triggered workflows for API and contract tests, the k6 performance baseline, and the BTC price window
+- GitHub Actions: CoinBoard UI tests (with the locator self-heal) on every push and pull request that touches the app or its tests, and a daily CoinBoard deploy
 
 **Self-healing agents**
 - BTC price window: recentres the expected price range when the live price drifts outside it, after checks in code (positive price, unchanged width, a shift of at most 10%)
-- Navigation locators: repairs the homepage page object using a local LLM (Qwen2.5-Coder-7B-Instruct GGUF via `node-llama-cpp`, no external API)
-- Navigation targets: when a tab still works but now leads to a different page, reports the expected and actual URLs and opens a PR updating the test, for a human to review
+- CoinBoard locators: when the app's markup changes and a CoinBoard UI test can't find an element, repairs the page object using a local LLM (Qwen2.5-Coder-7B-Instruct GGUF via `node-llama-cpp`, no external API), re-runs the suite, has a second local-model pass audit the patch, and commits it to the branch under test
 
 **AI tooling**
 - Claude Code with project skills (`api-testing`, `e2e-testing`) and the Playwright MCP server (`@playwright/mcp`)
@@ -95,7 +93,6 @@ npm test                # all specs
 npm run test:api        # API specs (simple price, quotes latest)
 npm run test:contract   # contract specs (provider specs need CMC_API_KEY)
 npm run test:btc-price  # BTC price window spec
-npm run test:e2e        # browser E2E specs
 npm run test:coinboard  # CoinBoard UI specs (starts the app's dev server)
 npm run test:perf       # k6 latency baseline (needs the k6 binary and CMC_API_KEY exported)
 npm run test:ui         # Playwright UI mode
@@ -105,7 +102,6 @@ npm run test:allure       # run each Playwright suite, then build its own Allure
 npm run allure:api        # build allure-report/api/ from allure-results/api/
 npm run allure:contract   # build allure-report/contract/
 npm run allure:btc-price  # build allure-report/btc-price/
-npm run allure:navigation # build allure-report/navigation/
 npm run allure:coinboard  # build allure-report/coinboard/
 npm run allure:perf       # build allure-report/perf/
 ALLURE_SUITE=api npm run allure:open  # open one suite's report
@@ -166,18 +162,16 @@ flowchart TD
         CHECKS -->|"any fail"| KEEP["keep window, fail the job"]
         COMMIT_BTC -.->|writes| WINDOW["btc-price-window.json"]
 
-        WF_NAV["coinmarketcap-navigation-heal.yml (cron daily)"] --> NAV["self-heal-navigation-locators.mts"]
-        NAV -->|"locator-shaped failure in tests/e2e"| LLM_NAV["local LLM patch"]
-        LLM_NAV --> REVERIFY["re-run e2e suite"]
+        WF_CB["coinboard-tests.yml (push / PR)"] --> CBHEAL["self-heal-coinboard-locators.mts"]
+        CBHEAL -->|"locator-shaped failure in tests/coinboard"| LLM_CB["local LLM patch"]
+        LLM_CB --> REVERIFY["re-run coinboard suite"]
         REVERIFY -->|"fix confirmed"| AUDITOR
 
         AUDITOR["auditChange.mts<br/>(local-model commit auditor)"]
         AUDITOR -->|"VERDICT: PASS"| COMMIT_HEAL["git commit --no-verify"]
         AUDITOR -->|"VERDICT: CRITICAL / unparseable"| REVERT["discard change, leave prior state"]
-        COMMIT_HEAL -.->|writes| LOCATORS["CoinMarketCapHomePage.ts"]
-
-        NAV -->|"tab leads to a different URL"| DRIFT["report expected vs actual URL,<br/>update expectedPath, re-run those tests"]
-        DRIFT -->|"passes (CI only)"| PR["open PR for human review"]
+        COMMIT_HEAL -.->|writes| LOCATORS["tests/coinboard/pages/*.ts"]
+        COMMIT_HEAL --> PUSH["push to the branch under test"]
     end
 
     subgraph localmodel["Shared local inference"]
@@ -186,15 +180,13 @@ flowchart TD
         LOCALMODEL --> GGUF
     end
 
-    LLM_NAV -->|"promptLocalModel()"| LOCALMODEL
+    LLM_CB -->|"promptLocalModel()"| LOCALMODEL
     AUDITOR -->|"promptLocalModel()"| LOCALMODEL
 ```
 
 - **Skills** (`api-testing`, `e2e-testing`, `test-design`, `typescript-code-review`) are conventions Claude Code loads for a matching task — the first three during interactive development, the last one only inside the headless review invoked by the pre-commit hook.
 - **Hooks**: the Husky `pre-commit` hook is the only one wired into `git commit` directly; it runs lint then `PreCommitCodeReviewHook.mts`, which blocks on 🔴 critical findings from the `typescript-code-review` skill. Both self-heal agents deliberately bypass it (`--no-verify`) since they avoid the paid `claude -p` call this hook makes.
-- **Agents**: the BTC price window heal runs on every Playwright run via `globalSetup`, including its own and the API-tests cron workflows. Its recentring is gated by checks in code; it used to go through the local-model auditor, which got the arithmetic wrong and blocked valid recentrings. The navigation heal (its own daily cron) has two paths:
-  - A broken locator gets a local-LLM patch, verified by re-running the suite, then audited by `auditChange.mts` before committing. Patch generation and the audit both call the same `localModel.mts` helper, which drives the shared, gitignored, locally-cached GGUF model.
-  - A tab that now leads to a different page is fixed without the LLM: the script updates the test's expected path, re-runs those tests against the live site and opens a PR instead of committing, because the change edits an assertion. The run stays red until the PR is merged.
+- **Agents**: the BTC price window heal runs on every Playwright run via `globalSetup`, including its own and the API-tests cron workflows. Its recentring is gated by checks in code; it used to go through the local-model auditor, which got the arithmetic wrong and blocked valid recentrings. The CoinBoard locator heal runs inside the CoinBoard UI tests workflow. When every failure is a broken locator, it gets a local-LLM patch of the page object, verified by re-running the suite, then audited by `auditChange.mts` before committing to the branch under test. Any other failure is left for a human. Patch generation and the audit both call the same `localModel.mts` helper, which drives the shared, gitignored GGUF model, downloaded only when a heal is attempted.
 
 ## Project layout
 
@@ -205,7 +197,6 @@ src/db/testCases/      SQLite test case store
 src/web/testCaseViewer/ test case viewer (server + page)
 tests/api/             API specs
 tests/contract/        contract specs (provider, consumer, fixtures)
-tests/e2e/             E2E specs and page objects
 tests/coinboard/       CoinBoard UI specs, page objects, fixtures and snapshot stubs
 tests/perf/            k6 latency baseline
 .agents/               self-healing agents and the pre-commit review hook

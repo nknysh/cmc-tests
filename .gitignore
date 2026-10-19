@@ -9,8 +9,8 @@ perf-results/
 .DS_Store
 *.log
 .env
-.agents/coinmarketcap-navigation/last-run.json
-.agents/coinmarketcap-navigation/models/
+.agents/coinboard-locators/last-run.json
+.agents/shared/models/
 data/*.db
 .playwright-mcp/
 

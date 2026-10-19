@@ -2,7 +2,9 @@ name: CoinBoard UI Tests
 
 # Runs every CoinBoard UI spec (tests/coinboard, the `coinboard` Playwright
 # project) against the app's Vite dev server, which the config starts. Specs
-# serve their own snapshot via page.route, so no CMC_API_KEY is needed.
+# serve their own snapshot via page.route, so no CMC_API_KEY is needed. The run
+# goes through the locator self-heal (.agents/coinboard-locators/), which
+# commits a verified, audited page object fix to the branch under test.
 on:
   push:
     branches: [main]
@@ -10,6 +12,9 @@ on:
       - 'app/**'
       - 'tests/coinboard/**'
       - 'tests/helpers/**'
+      - '.agents/coinboard-locators/**'
+      - '.agents/self-heal-commit-auditor/**'
+      - '.agents/shared/**'
       - 'playwright.config.ts'
       - 'allurerc.mjs'
       - 'package.json'
@@ -20,6 +25,9 @@ on:
       - 'app/**'
       - 'tests/coinboard/**'
       - 'tests/helpers/**'
+      - '.agents/coinboard-locators/**'
+      - '.agents/self-heal-commit-auditor/**'
+      - '.agents/shared/**'
       - 'playwright.config.ts'
       - 'allurerc.mjs'
       - 'package.json'
@@ -40,13 +48,21 @@ concurrency:
 jobs:
   coinboard:
     runs-on: ubuntu-latest
+    # Bounds a heal: the model download plus a few CPU-only completions, each
+    # capped at 30 minutes by .agents/shared/localModel.mts. A passing run takes
+    # a few minutes.
+    timeout-minutes: 120
     # Own Allure suite (results/report/history, see allurerc.mjs). It also makes
     # playwright.config.ts start the app's dev server.
     env:
       ALLURE_SUITE: coinboard
       SKIP_BTC_PRICE_HEAL: '1'
     steps:
+      # The PR head rather than the default merge commit, so a heal commit can be
+      # pushed to the PR's branch.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/setup-node@v7
         with:
@@ -74,9 +90,38 @@ jobs:
           mkdir -p allure-history
           cp "gh-pages/allure-history/$ALLURE_SUITE.jsonl" allure-history/ 2>/dev/null || true
 
-      # `allure run` exits with the coinboard quality gate's result (allurerc.mjs).
-      - name: Run CoinBoard UI tests
-        run: ./node_modules/.bin/allure run -- ./node_modules/.bin/playwright test --project=coinboard
+      # `allure run` builds the report with the coinboard quality gate
+      # (allurerc.mjs), and its exit code is the gate's. The heal script can also
+      # fail with no failing test (e.g. the auditor vetoes a patch that passes),
+      # so its own exit code is kept too and the step fails if either one is
+      # non-zero. The local model downloads (~4.7GB) only on a run that heals,
+      # so it isn't cached: restoring it would slow every passing run.
+      - name: Run CoinBoard UI tests with locator self-heal
+        run: |
+          heal_exit="$RUNNER_TEMP/heal-exit-code"
+          gate=0
+          HEAL_EXIT="$heal_exit" ./node_modules/.bin/allure run -- sh -c \
+            'node .agents/coinboard-locators/self-heal-coinboard-locators.mts; code=$?; echo "$code" > "$HEAL_EXIT"; exit "$code"' \
+            || gate=$?
+          heal=$(cat "$heal_exit" 2>/dev/null || echo 1)
+          echo "quality gate exit: $gate, heal script exit: $heal"
+          [ "$gate" -eq 0 ] && [ "$heal" -eq 0 ]
+
+      # A push with GITHUB_TOKEN doesn't trigger another workflow run, so a heal
+      # never loops; the heal's own re-run is what verified the fix. A fork's
+      # branch can't be pushed to, so its fix is left for the author.
+      - name: Push healed locators
+        env:
+          BASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
+          FROM_FORK: ${{ github.event.pull_request.head.repo.full_name != '' && github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          [ "$(git rev-parse HEAD)" != "$BASE_SHA" ] || exit 0
+          if [ "$FROM_FORK" = "true" ]; then
+            echo "Self-healed CoinBoard locators can't be pushed to a fork's branch; apply them from the job log." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
 
       - name: Upload Playwright report
         if: always()
@@ -108,6 +153,8 @@ jobs:
           mkdir -p "_pages/$ALLURE_SUITE" _pages/allure-history
           cp -r "allure-report/$ALLURE_SUITE/." "_pages/$ALLURE_SUITE/"
           cp "allure-history/$ALLURE_SUITE.jsonl" _pages/allure-history/
+          # The navigation e2e suite was removed; drop its report and history.
+          rm -rf _pages/navigation _pages/allure-history/navigation.jsonl
           cp .github/allure-summary/index.html _pages/index.html
           cd _pages
           git add -A

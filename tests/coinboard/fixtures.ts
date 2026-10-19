@@ -1,7 +1,8 @@
 import { test as base } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import type { Page, TestInfo } from '@playwright/test'
 import type { MarketSnapshot } from '../../app/src/data/types'
 import { fixtureSnapshot } from './data/snapshot'
+import { DOM_SNAPSHOT_ATTACHMENT, DOM_SNAPSHOT_MAX_LENGTH, serializeElement } from './domSnapshot'
 import { CoinPage } from './pages/CoinPage'
 import { ComparePage } from './pages/ComparePage'
 
@@ -32,11 +33,23 @@ async function browserErrors(page: Page): Promise<string[]> {
   return [...pageErrors, ...consoleErrors]
 }
 
+/** Attaches the page's DOM, which the CoinBoard locator heal sends to its model to repair a page object. */
+async function attachDomSnapshot(page: Page, testInfo: TestInfo): Promise<void> {
+  try {
+    const dom = await page.locator('body').evaluate(serializeElement, undefined, { timeout: 5_000 })
+    await testInfo.attach(DOM_SNAPSHOT_ATTACHMENT, { body: dom.slice(0, DOM_SNAPSHOT_MAX_LENGTH), contentType: 'text/html' })
+  } catch (error) {
+    // Best effort: the page may already be closed, e.g. after a test timeout.
+    console.warn(`Couldn't capture a DOM snapshot: ${String(error)}`)
+  }
+}
+
 export const test = base.extend<CoinBoardFixtures>({
   expectedBrowserErrors: [[], { option: true }],
   page: async ({ page, expectedBrowserErrors }, use, testInfo) => {
     await page.route(LATEST_SNAPSHOT_URL, (route) => route.fulfill({ json: fixtureSnapshot }))
     await use(page)
+    if (testInfo.status !== testInfo.expectedStatus) await attachDomSnapshot(page, testInfo)
 
     // Checked after the test, so an app error fails it even when every assertion passed.
     const errors = await browserErrors(page)

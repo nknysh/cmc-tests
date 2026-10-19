@@ -6,17 +6,15 @@ import path from 'node:path'
 // contains a top-level await ("require() cannot be used on an ESM graph with
 // top-level await"). A dynamic import() always goes through Node's ESM loader
 // regardless of the caller's own module system, so it works from both that
-// require()-based path and the navigation heal's direct `node script.mts` (ESM).
+// require()-based path and the CoinBoard locator heal's direct `node script.mts` (ESM).
 async function loadNodeLlamaCpp(): Promise<typeof import('node-llama-cpp')> {
   return import('node-llama-cpp')
 }
 
-// Runs fully offline via node-llama-cpp; downloaded once (~4.7GB) on first use.
-// Deliberately kept pointed at the navigation heal's existing models dir (already
-// gitignored, already the CI cache key) rather than a new "shared" location, so
-// no extra ~4.7GB download or cache-key change is needed for callers that reuse it.
+// Runs fully offline via node-llama-cpp; downloaded once (~4.7GB) on first use
+// into a gitignored dir shared by every caller, so they never download it twice.
 export const MODEL_URI = 'hf:Qwen/Qwen2.5-Coder-7B-Instruct-GGUF:Q4_K_M'
-export const MODELS_DIR = path.join(process.cwd(), '.agents/coinmarketcap-navigation/models')
+export const MODELS_DIR = path.join(process.cwd(), '.agents/shared/models')
 
 // Loads, prompts once, and disposes - a caller needing two prompts in one run
 // (e.g. propose-a-fix then audit-the-fix) pays for two full loads rather than
@@ -37,13 +35,27 @@ async function disposeQuietly(name: string, dispose: () => Promise<void>): Promi
   }
 }
 
+// Without these bounds a prompt can run for as long as the model keeps
+// generating: CPU inference is minutes per completion, and a 7B model can
+// ramble well past the answer. A run past the timeout throws rather than
+// returning a cut-off answer, which a caller could mistake for a whole file.
+const DEFAULT_MAX_TOKENS = 4096
+const DEFAULT_TIMEOUT_MS = 30 * 60_000
+
+const elapsed = (start: number) => `${Math.round((Date.now() - start) / 1000)}s`
+
 export async function promptLocalModel(params: {
   systemPrompt: string
   userPrompt: string
   contextSize?: number
+  maxTokens?: number
+  timeoutMs?: number
 }): Promise<string> {
   const { getLlama, resolveModelFile, LlamaChatSession } = await loadNodeLlamaCpp()
-  const modelPath = await resolveModelFile(MODEL_URI, MODELS_DIR)
+  const start = Date.now()
+  // Logged first: the first call downloads ~4.7GB, which otherwise looks like a hang.
+  console.log(`[localModel] resolving ${MODEL_URI} in ${MODELS_DIR} (downloads ~4.7GB on first use)`)
+  const modelPath = await resolveModelFile(MODEL_URI, { directory: MODELS_DIR, cli: true })
 
   const llama = await getLlama()
   try {
@@ -56,7 +68,17 @@ export async function promptLocalModel(params: {
           systemPrompt: params.systemPrompt,
         })
 
-        return await session.prompt(params.userPrompt)
+        const maxTokens = params.maxTokens ?? DEFAULT_MAX_TOKENS
+        const timeoutMs = params.timeoutMs ?? DEFAULT_TIMEOUT_MS
+        console.log(
+          `[localModel] model ready after ${elapsed(start)}, generating (max ${maxTokens} tokens, timeout ${timeoutMs / 60_000} min)`
+        )
+        const response = await session.prompt(params.userPrompt, {
+          maxTokens,
+          signal: AbortSignal.timeout(timeoutMs),
+        })
+        console.log(`[localModel] done after ${elapsed(start)}`)
+        return response
       } finally {
         await disposeQuietly('context', () => context.dispose())
       }

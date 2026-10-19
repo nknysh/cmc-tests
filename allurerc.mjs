@@ -1,7 +1,7 @@
 import process from 'node:process'
 import { defineConfig } from 'allure'
 
-// One report and one history file per suite (btc-price, contract, api, navigation, coinboard, perf), matching
+// One report and one history file per suite (btc-price, contract, api, coinboard, perf), matching
 // the per-suite results dir set in playwright.config.ts (and, for perf, in tests/perf/cmc-latency.k6.ts).
 const suite = process.env.ALLURE_SUITE || 'adhoc'
 
@@ -13,7 +13,6 @@ const minTestsCount = {
   'btc-price': 1,
   api: 43,
   contract: 36,
-  navigation: 11,
   // CoinBoard UI tests (tests/coinboard), one per test case in app/user-stories.
   coinboard: 46,
   // One result per k6 threshold.

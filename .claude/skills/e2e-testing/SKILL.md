@@ -36,14 +36,15 @@ Read the whole file before writing or fixing E2E tests; each section below appli
 ## Test File Organization
 
 ```
-playwright.config.ts          # repo root; projects: api, contract, btc-price, e2e
+playwright.config.ts          # repo root; projects: api, contract, btc-price, coinboard
 tests/
 ├── api/                      # live API specs (no browser) - see the api-testing skill
 ├── contract/                 # provider/consumer contract specs (no browser)
-└── e2e/
-    ├── pages/                # page objects, e.g. CoinMarketCapHomePage.ts
-    └── navigation/           # E2E specs, grouped by feature
-app/                          # CoinBoard demo app, a UI-test target (see CLAUDE.md)
+└── coinboard/                # CoinBoard UI specs (see CLAUDE.md)
+    ├── fixtures.ts           # test fixtures: snapshot stub, page objects, browser-error check
+    ├── pages/                # page objects, e.g. ComparePage.ts
+    └── specs/                # one spec per user story, e.g. CMP-01-….spec.ts
+app/                          # CoinBoard demo app, the UI-test target (see CLAUDE.md)
 ```
 
 ## Locators
@@ -195,7 +196,7 @@ hit another row's control.
 Provide page objects as fixtures rather than building them in `beforeEach`:
 
 ```typescript
-// tests/e2e/fixtures.ts
+// tests/coinboard/fixtures.ts
 import { test as base } from '@playwright/test'
 import { MarketsPage } from './pages/MarketsPage'
 
@@ -344,9 +345,10 @@ await page.clock.fastForward('27:00:00') // with clock.install(), runs timers to
 ## Playwright Configuration
 
 This repo's config is [playwright.config.ts](../../../playwright.config.ts) at the
-repo root: one config and four projects (`api`, `contract`, `btc-price`, `e2e`).
-Only `e2e` launches a browser (Desktop Chrome). There is no `webServer`: E2E
-specs hit the live CoinMarketCap site. Shared defaults already set under `use`:
+repo root: one config and four projects (`api`, `contract`, `btc-price`, `coinboard`).
+Only `coinboard` launches a browser (Desktop Chrome). Runs that include it start
+the app's Vite dev server as `webServer`, unless `COINBOARD_URL` points at a
+running app; the project's `baseURL` is the app root. Shared defaults already set under `use`:
 
 ```typescript
 use: {
@@ -363,8 +365,8 @@ Reporters are `html`, `list` and `allure-playwright` (results under
 `allure-results/<ALLURE_SUITE>/`), plus `json` when
 `PLAYWRIGHT_JSON_OUTPUT_NAME` is set. Add a new browser suite as another
 project rather than a second config file. Every test declares an Allure
-severity via `severity()` from `tests/helpers/severity.ts` (the navigation
-suite sets `critical` on its `test.describe`); see the `test-design` skill.
+severity via `severity()` from `tests/helpers/severity.ts`, matching the
+severity of the test case it automates; see the `test-design` skill.
 
 Newer options worth reaching for:
 
@@ -413,7 +415,7 @@ In this repo the live CMC projects still use `workers: 1` plus one shared
 ### Identify flakiness
 
 ```bash
-npx playwright test tests/e2e/navigation --repeat-each=10
+npx playwright test tests/coinboard --repeat-each=10
 npx playwright test --shuffle            # random order exposes order dependence (1.64+)
 npx playwright test --shuffle 271828182  # replay a failing order by its seed
 npx playwright test --fail-on-flaky-tests
@@ -518,7 +520,7 @@ third-party actions pinned to a SHA.
 
 ```yaml
 jobs:
-  e2e:
+  coinboard:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -526,10 +528,13 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --ignore-scripts
+      - run: npm ci --ignore-scripts
+        working-directory: app
       - run: ./node_modules/.bin/playwright install --with-deps chromium
-      - run: ./node_modules/.bin/allure run -- ./node_modules/.bin/playwright test --project=e2e
+      - run: ./node_modules/.bin/allure run -- ./node_modules/.bin/playwright test --project=coinboard
         env:
-          ALLURE_SUITE: navigation
+          ALLURE_SUITE: coinboard
+          SKIP_BTC_PRICE_HEAL: '1'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -558,7 +563,7 @@ jobs:
 ## Failed Tests
 
 ### test-name
-**File:** `tests/e2e/feature.spec.ts:45`
+**File:** `tests/coinboard/specs/feature.spec.ts:45`
 **Error:** Expected element to be visible
 **Trace:** test-results/<test>/trace.zip
 **Recommended Fix:** [description]

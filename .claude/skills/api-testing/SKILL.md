@@ -152,8 +152,8 @@ if (!response.ok) {
 
 ## API Spec Structure
 
-API tests live under `tests/api/`, separate from browser E2E specs under
-`tests/e2e/` (both covered by `testDir: './tests'` in
+API tests live under `tests/api/`, separate from the browser UI specs under
+`tests/coinboard/` (each its own project in
 [playwright.config.ts](../../../playwright.config.ts)). An API spec:
 
 - Imports the client directly — no browser `page` fixture needed, so
