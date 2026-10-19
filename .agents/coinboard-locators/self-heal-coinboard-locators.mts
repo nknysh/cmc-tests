@@ -93,13 +93,14 @@ function runCoinboardTests(): TestRun {
   const report: JSONReport = JSON.parse(fs.readFileSync(JSON_REPORT_PATH, 'utf-8'))
   // Deduped per test: CI retries report the same failure once per attempt. The
   // last attempt wins, so a test that passed on retry isn't counted as failed.
-  // Keyed by file and title, since two specs can share a test title.
+  // Keyed by Playwright's per-test id, since two tests can share a title (in
+  // different files, or different describe blocks of one file).
   const outcomes = new Map<string, TestFailure | undefined>()
 
   const walk = (suite: JSONReportSuite): void => {
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
-        const key = `${spec.file}::${spec.title}`
+        const key = spec.id
         for (const result of test.results ?? []) {
           if (result.status === 'passed') outcomes.set(key, undefined)
           else if (result.status !== 'skipped') outcomes.set(key, toFailure(spec, result, report.config.rootDir))
@@ -114,7 +115,7 @@ function runCoinboardTests(): TestRun {
   // Printed unconditionally (not just the count): the console log is the
   // quickest record of which test broke and why.
   for (const failure of failures) {
-    console.log(`[coinboard-locators]   ✗ ${failure.title}\n${failure.error.slice(0, 1000)}`)
+    console.log(`[coinboard-locators]   ✗ ${failure.file}: ${failure.title}\n${failure.error.slice(0, 1000)}`)
   }
 
   return { passed: failures.length === 0, failures }

@@ -7,7 +7,8 @@ export const DOM_SNAPSHOT_MAX_LENGTH = 20_000
  * Serializes an element's tag, the attributes locators key off and its direct text, for the
  * CoinBoard locator self-heal (`.agents/coinboard-locators/`). An ARIA snapshot alone drops the
  * `data-testid` and `for` attributes some page object locators use. Class and style are left
- * out as noise. This is an `.mts` module so the heal script, run by plain node, can import it. It runs in the browser via `locator.evaluate`, so it must stay self-contained.
+ * out as noise. This is an `.mts` module so the heal script, run by plain node, can import
+ * it. It runs in the browser via `locator.evaluate`, so it must stay self-contained.
  */
 export function serializeElement(root: Element): string {
   const KEEP_ATTRS = /^(data-|aria-|role$|id$|href$|for$|name$|type$|value$|selected$|disabled$)/
