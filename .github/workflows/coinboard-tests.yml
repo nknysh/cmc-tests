@@ -1,15 +1,18 @@
 name: CoinBoard UI Tests
 
 # Runs every CoinBoard UI spec (tests/coinboard, the `coinboard` Playwright
-# project) against the app's Vite dev server, which the config starts. Specs
-# serve their own snapshot via page.route, so no CMC_API_KEY is needed. The run
-# goes through the locator self-heal (.agents/coinboard-locators/), which
-# commits a verified, audited page object fix to the branch under test.
+# project) daily and on every change to the specs or their tooling, against
+# the app's Vite dev server, which the config starts. Specs serve their own
+# snapshot via page.route, so no CMC_API_KEY is needed. The run goes through
+# the locator self-heal (.agents/coinboard-locators/), which commits a
+# verified, audited page object fix to the branch under test. The blocker and
+# critical specs also run on every app change, in coinboard-smoke-tests.yml.
 on:
+  schedule:
+    - cron: '0 4 * * *'
   push:
     branches: [main]
     paths:
-      - 'app/**'
       - 'tests/coinboard/**'
       - 'tests/helpers/**'
       - '.agents/coinboard-locators/**'
@@ -22,7 +25,6 @@ on:
       - '.github/workflows/coinboard-tests.yml'
   pull_request:
     paths:
-      - 'app/**'
       - 'tests/coinboard/**'
       - 'tests/helpers/**'
       - '.agents/coinboard-locators/**'

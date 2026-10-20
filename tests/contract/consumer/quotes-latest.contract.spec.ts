@@ -18,7 +18,7 @@ const QUOTES_LATEST_URL = `${CMC_BASE_URL}/v2/cryptocurrency/quotes/latest`
 const SYMBOL_BTC = 'BTC'
 const CURRENCY_USD = 'USD'
 
-test.describe('fetchPrice consumer contract — GET /v2/cryptocurrency/quotes/latest', { annotation: severity(Severity.CRITICAL) }, () => {
+test.describe('fetchPrice consumer contract — GET /v2/cryptocurrency/quotes/latest', severity(Severity.CRITICAL), () => {
   let stub: FetchStub | undefined
 
   test.afterEach(() => {

@@ -69,7 +69,7 @@ const INCOMPLETE_ROWS = [
 const shown = (keys: string) => `"${keys}"`
 
 test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: ['@converter', '@CNV-01'] }, () => {
-  test('User sees the Converter page with Amount, From and To', { annotation: severity(Severity.BLOCKER) }, async ({ converterPage }) => {
+  test('User sees the Converter page with Amount, From and To', severity(Severity.BLOCKER), async ({ converterPage }) => {
     await converterPage.goto()
 
     await expect(converterPage.heading).toBeVisible()
@@ -79,7 +79,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.result).toBeVisible()
   })
 
-  test('User sees 1 Bitcoin converted to US dollars by default', { annotation: severity(Severity.CRITICAL) }, async ({ converterPage }) => {
+  test('User sees 1 Bitcoin converted to US dollars by default', severity(Severity.CRITICAL), async ({ converterPage }) => {
     await converterPage.goto()
 
     await expect(converterPage.amount).toHaveValue('1')
@@ -89,7 +89,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.alert).toHaveCount(0)
   })
 
-  test('Default From follows the ranking when Ethereum is ranked above Bitcoin', { annotation: severity(Severity.NORMAL) }, async ({ converterPage, serveSnapshot }) => {
+  test('Default From follows the ranking when Ethereum is ranked above Bitcoin', severity(Severity.NORMAL), async ({ converterPage, serveSnapshot }) => {
     await serveSnapshot(ETHEREUM_RANKED_FIRST)
     await converterPage.goto()
 
@@ -98,7 +98,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.result).toHaveText(ETH_TO_USD)
   })
 
-  test('Default From falls back to the top-ranked coin when Bitcoin is not in the snapshot', { annotation: severity(Severity.NORMAL) }, async ({ converterPage, serveSnapshot }) => {
+  test('Default From falls back to the top-ranked coin when Bitcoin is not in the snapshot', severity(Severity.NORMAL), async ({ converterPage, serveSnapshot }) => {
     await serveSnapshot(WITHOUT_BITCOIN)
     await converterPage.goto()
 
@@ -109,7 +109,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.alert).toHaveCount(0)
   })
 
-  test('From and To offer US Dollar first, then every snapshot coin in rank order', { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+  test('From and To offer US Dollar first, then every snapshot coin in rank order', severity(Severity.NORMAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -129,7 +129,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     })
   })
 
-  test('User can convert between two coins', { annotation: severity(Severity.CRITICAL) }, async ({ converterPage }) => {
+  test('User can convert between two coins', severity(Severity.CRITICAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -138,7 +138,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.result).toHaveText('1 BTC = 33.954283 ETH')
   })
 
-  test('User can convert a decimal amount', { annotation: severity(Severity.CRITICAL) }, async ({ converterPage }) => {
+  test('User can convert a decimal amount', severity(Severity.CRITICAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -148,7 +148,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.amount).toHaveAttribute('aria-invalid', 'false')
   })
 
-  test('Converting US dollars to a coin shows a small result in plain digits', { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+  test('Converting US dollars to a coin shows a small result in plain digits', severity(Severity.NORMAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -158,7 +158,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.result).toHaveText('1 USD = 0.000012184033 BTC')
   })
 
-  test('Large amounts round to 8 significant digits with thousands separators', { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+  test('Large amounts round to 8 significant digits with thousands separators', severity(Severity.NORMAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -168,7 +168,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.amount).toHaveValue('123456789')
   })
 
-  test('Tiny amounts and results show in plain digits, not scientific notation', { annotation: severity(Severity.MINOR) }, async ({ converterPage }) => {
+  test('Tiny amounts and results show in plain digits, not scientific notation', severity(Severity.MINOR), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -179,7 +179,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.result).not.toHaveText(/\de[+-]?\d/i)
   })
 
-  test('Result updates at once when Amount, From or To changes', { annotation: severity(Severity.CRITICAL) }, async ({ converterPage, page }) => {
+  test('Result updates at once when Amount, From or To changes', severity(Severity.CRITICAL), async ({ converterPage, page }) => {
     await test.step('open the default conversion', async () => {
       await converterPage.goto()
       await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
@@ -203,7 +203,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
   })
 
   for (const { amount, currency, result } of SAME_CURRENCY_ROWS) {
-    test(`Converting a currency to itself gives the same amount: ${currency}`, { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+    test(`Converting a currency to itself gives the same amount: ${currency}`, severity(Severity.NORMAL), async ({ converterPage }) => {
       await converterPage.goto()
       await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -218,7 +218,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     })
   }
 
-  test('Amount of zero converts to zero without an error', { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+  test('Amount of zero converts to zero without an error', severity(Severity.NORMAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -229,7 +229,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect(converterPage.amount).toHaveAttribute('aria-invalid', 'false')
   })
 
-  test('Empty Amount shows an error and no result until a value is entered', { annotation: severity(Severity.CRITICAL) }, async ({ converterPage }) => {
+  test('Empty Amount shows an error and no result until a value is entered', severity(Severity.CRITICAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -250,7 +250,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     })
   })
 
-  test('Amount and currencies reset to the defaults after leaving the page', { annotation: severity(Severity.NORMAL) }, async ({ converterPage, page }) => {
+  test('Amount and currencies reset to the defaults after leaving the page', severity(Severity.NORMAL), async ({ converterPage, page }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -276,7 +276,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
   })
 
   for (const { keys, amount, result } of TYPED_ROWS) {
-    test(`Typed characters other than digits and one decimal point are ignored: ${shown(keys)}`, { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+    test(`Typed characters other than digits and one decimal point are ignored: ${shown(keys)}`, severity(Severity.NORMAL), async ({ converterPage }) => {
       await converterPage.goto()
       await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
       await converterPage.typeAmount('2.5')
@@ -291,7 +291,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
   }
 
   for (const { text, amount, result } of PASTE_ROWS) {
-    test(`Pasting text with characters other than digits and a decimal point leaves Amount unchanged: ${shown(text)}`, { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+    test(`Pasting text with characters other than digits and a decimal point leaves Amount unchanged: ${shown(text)}`, severity(Severity.NORMAL), async ({ converterPage }) => {
       await converterPage.goto()
       await expect(converterPage.amount).toHaveValue('1')
 
@@ -304,7 +304,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
   }
 
   for (const amount of MAX_VALID_ROWS) {
-    test(`Amount above one billion shows the max error: ${amount}`, { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+    test(`Amount above one billion shows the max error: ${amount}`, severity(Severity.NORMAL), async ({ converterPage }) => {
       await converterPage.goto()
       await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -317,7 +317,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
   }
 
   for (const amount of MAX_INVALID_ROWS) {
-    test(`Amount above one billion shows the max error: ${amount}`, { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+    test(`Amount above one billion shows the max error: ${amount}`, severity(Severity.NORMAL), async ({ converterPage }) => {
       await converterPage.goto()
       await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -331,7 +331,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
   }
 
   for (const { incomplete, completed, result } of INCOMPLETE_ROWS) {
-    test(`Incomplete Amount shows no result while typing and the error once focus leaves: ${shown(incomplete)}`, { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+    test(`Incomplete Amount shows no result while typing and the error once focus leaves: ${shown(incomplete)}`, severity(Severity.NORMAL), async ({ converterPage }) => {
       await converterPage.goto()
       await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -360,7 +360,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     })
   }
 
-  test('Long result wraps within the page on a narrow screen', { annotation: severity(Severity.MINOR) }, async ({ converterPage, page }) => {
+  test('Long result wraps within the page on a narrow screen', severity(Severity.MINOR), async ({ converterPage, page }) => {
     await page.setViewportSize(NARROW_VIEWPORT)
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
@@ -375,7 +375,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await expect.poll(() => converterPage.resultLineCount()).toBeGreaterThan(1)
   })
 
-  test('Converter can be used from the keyboard and announces changes', { annotation: severity(Severity.NORMAL) }, async ({ converterPage, page }) => {
+  test('Converter can be used from the keyboard and announces changes', severity(Severity.NORMAL), async ({ converterPage, page }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
     await expect(converterPage.result).toHaveJSProperty('tagName', 'OUTPUT')
@@ -408,7 +408,7 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     })
   })
 
-  test('Pressing Enter in Amount keeps the Converter open', { annotation: severity(Severity.NORMAL) }, async ({ converterPage, page }) => {
+  test('Pressing Enter in Amount keeps the Converter open', severity(Severity.NORMAL), async ({ converterPage, page }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
     await converterPage.typeAmount('2.5')

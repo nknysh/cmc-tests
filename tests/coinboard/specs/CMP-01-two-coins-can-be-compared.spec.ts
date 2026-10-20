@@ -16,7 +16,7 @@ const WITHOUT_BITCOIN = withoutCoinReranked(fixtureSnapshot, 'bitcoin')
 const WITHOUT_BNB = withoutCoin(fixtureSnapshot, 'bnb')
 
 test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'] }, () => {
-  test('User sees the Compare coins page with First coin and Second coin choices', { annotation: severity(Severity.BLOCKER) }, async ({ comparePage }) => {
+  test('User sees the Compare coins page with First coin and Second coin choices', severity(Severity.BLOCKER), async ({ comparePage }) => {
     await comparePage.goto()
 
     await expect(comparePage.heading).toBeVisible()
@@ -25,7 +25,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.table).toBeVisible()
   })
 
-  test('Coin choices offer every snapshot coin as name and symbol without US Dollar', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Coin choices offer every snapshot coin as name and symbol without US Dollar', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto()
     await expect(comparePage.table).toBeVisible()
 
@@ -39,7 +39,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     })
   })
 
-  test('Coin choices list coins in rank order', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Coin choices list coins in rank order', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto()
     await expect(comparePage.table).toBeVisible()
 
@@ -51,7 +51,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.options('second')).toHaveText(await firstOptions.allTextContents())
   })
 
-  test('User sees the top two ranked coins compared by default', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
+  test('User sees the top two ranked coins compared by default', severity(Severity.CRITICAL), async ({ comparePage }) => {
     await comparePage.goto()
 
     await expect(comparePage.selectedOption('first')).toHaveText(BITCOIN)
@@ -60,7 +60,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.coinHeader('second')).toHaveText('Ethereum')
   })
 
-  test('Default pair follows the ranking when Ethereum is ranked above Bitcoin', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, serveSnapshot }) => {
+  test('Default pair follows the ranking when Ethereum is ranked above Bitcoin', severity(Severity.NORMAL), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(ETHEREUM_RANKED_FIRST)
     await comparePage.goto()
 
@@ -69,7 +69,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.coinHeader('first')).toHaveText('Ethereum')
   })
 
-  test('Default pair follows the ranking when Bitcoin is not in the snapshot', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, serveSnapshot }) => {
+  test('Default pair follows the ranking when Bitcoin is not in the snapshot', severity(Severity.NORMAL), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(WITHOUT_BITCOIN)
     await comparePage.goto()
 
@@ -80,7 +80,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.alert).toHaveCount(0)
   })
 
-  test('User can change the First coin and see the comparison update at once', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, page }) => {
+  test('User can change the First coin and see the comparison update at once', severity(Severity.CRITICAL), async ({ comparePage, page }) => {
     await test.step('open the default pair', async () => {
       await comparePage.goto()
       await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
@@ -96,7 +96,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     })
   })
 
-  test('User can change the Second coin and see the comparison update at once', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
+  test('User can change the Second coin and see the comparison update at once', severity(Severity.CRITICAL), async ({ comparePage }) => {
     await test.step('open the default pair', async () => {
       await comparePage.goto()
       await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
@@ -111,7 +111,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     })
   })
 
-  test('Comparison shows one column per coin with the First coin on the left', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
+  test('Comparison shows one column per coin with the First coin on the left', severity(Severity.CRITICAL), async ({ comparePage }) => {
     await comparePage.goto()
     await expect(comparePage.table).toBeVisible()
 
@@ -128,7 +128,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     })
   })
 
-  test('User sees a pick-two-different-coins message when the same coin is chosen for both', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('User sees a pick-two-different-coins message when the same coin is chosen for both', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto()
     await expect(comparePage.table).toBeVisible()
 
@@ -140,7 +140,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.selectedOption('second')).toHaveText(BITCOIN)
   })
 
-  test('User can get the comparison back after choosing the same coin twice', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('User can get the comparison back after choosing the same coin twice', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto()
     await expect(comparePage.table).toBeVisible()
 
@@ -157,7 +157,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     })
   })
 
-  test('Missing First coin falls back to the top-ranked coin', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, serveSnapshot }) => {
+  test('Missing First coin falls back to the top-ranked coin', severity(Severity.CRITICAL), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(WITHOUT_BNB)
     await comparePage.goto('?a=bnb&b=tether')
 
@@ -168,7 +168,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.alert).toHaveCount(0)
   })
 
-  test('Missing Second coin falls back to the second-ranked coin', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, serveSnapshot }) => {
+  test('Missing Second coin falls back to the second-ranked coin', severity(Severity.CRITICAL), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(WITHOUT_BNB)
     await comparePage.goto('?a=tether&b=bnb')
 
@@ -179,7 +179,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.alert).toHaveCount(0)
   })
 
-  test('Same missing coin chosen twice falls back to the default pair', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, serveSnapshot }) => {
+  test('Same missing coin chosen twice falls back to the default pair', severity(Severity.NORMAL), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(WITHOUT_BNB)
     await comparePage.goto('?a=bnb&b=bnb')
 
@@ -190,7 +190,7 @@ test.describe('CMP-01: Two coins can be compared', { tag: ['@compare', '@CMP-01'
     await expect(comparePage.alert).toHaveCount(0)
   })
 
-  test("Fallback to the other choice's coin shows the pick-two-different-coins message", { annotation: severity(Severity.MINOR) }, async ({ comparePage, serveSnapshot }) => {
+  test("Fallback to the other choice's coin shows the pick-two-different-coins message", severity(Severity.MINOR), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(WITHOUT_BNB)
     await comparePage.goto('?a=bnb&b=bitcoin')
 

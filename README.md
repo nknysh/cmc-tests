@@ -24,7 +24,7 @@ The specs in `tests/coinboard/` run in their own Playwright project, `coinboard`
 - **Browser errors:** a test fails if the app throws an uncaught error or logs a `console.error`, even when every assertion passed. The errors are attached to the report.
 - **DOM snapshot:** every failing test gets a compact snapshot of the page's DOM attached, which the locator self-heal uses as its input.
 - **Dev server:** any run that includes the project starts the app's Vite dev server. To test a running or deployed app instead, set `COINBOARD_URL`.
-- **CI:** the [CoinBoard UI Tests workflow](.github/workflows/coinboard-tests.yml) runs the whole project through the locator self-heal on pushes to `main` and pull requests that change the app, its tests or the heal agents. It publishes the Allure report on every run except pull requests.
+- **CI:** the [CoinBoard UI Tests workflow](.github/workflows/coinboard-tests.yml) runs the whole project through the locator self-heal once a day and on pushes to `main` and pull requests that change its tests, the heal agents or the test config. It publishes the Allure report on every run except pull requests. The [CoinBoard Smoke Tests workflow](.github/workflows/coinboard-smoke-tests.yml) runs only the blocker and critical tests on pushes to `main` and pull requests that change the app (`npm run test:coinboard-smoke` locally).
 
 ## Allure reports
 
@@ -121,10 +121,11 @@ npm run snapshot -- <outDir> [previousHistory]  # write a CoinBoard snapshot (1 
 
 | Workflow | When it runs | What it does |
 |---|---|---|
-| [API Tests](.github/workflows/api-tests.yml) | every 6 hours, on demand | Contract specs, then API specs, each under its own Allure quality gate; publishes both reports |
+| [API Tests](.github/workflows/api-tests.yml) | daily at 01:30 UTC, on demand | Contract specs, then API specs, each under its own Allure quality gate; publishes both reports |
 | [BTC price window heal](.github/workflows/btc-price-window-heal.yml) | every 4 hours, on demand | Runs the BTC price spec, whose global setup recentres the price window, and pushes the commit if it changed |
 | [Performance baseline](.github/workflows/perf-tests.yml) | daily at 03:15 UTC, on demand | k6 latency baseline; publishes the Allure report and posts the results table as the job summary |
-| [CoinBoard UI Tests](.github/workflows/coinboard-tests.yml) | pushes to `main` and PRs touching the app, its tests or the heal agents, on demand | CoinBoard UI specs through the locator self-heal; pushes any heal commit to the branch under test |
+| [CoinBoard UI Tests](.github/workflows/coinboard-tests.yml) | daily at 04:00 UTC, pushes to `main` and PRs touching the CoinBoard tests, heal agents or test config, on demand | All CoinBoard UI specs through the locator self-heal; pushes any heal commit to the branch under test |
+| [CoinBoard Smoke Tests](.github/workflows/coinboard-smoke-tests.yml) | pushes to `main` and PRs touching the app, on demand | Blocker and critical CoinBoard UI specs only, selected by severity tag; publishes its own Allure report except on PRs |
 | [CoinBoard App](.github/workflows/app-deploy.yml) | daily at 06:00 UTC, pushes to `main` touching the app or its data script, on demand | Takes a fresh snapshot, builds the app and publishes it to GitHub Pages |
 | [SonarQube Cloud](.github/workflows/sonar.yml) | pushes to `main`, every PR, on demand | Static analysis with the ESLint report imported; fails when the quality gate fails |
 

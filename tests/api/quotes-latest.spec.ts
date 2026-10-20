@@ -151,7 +151,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'resolves a known asset by id',
-      { annotation: [{ type: 'test-case-id', description: '52' }, severity(Severity.CRITICAL)] },
+      severity(Severity.CRITICAL, { type: 'test-case-id', description: '52' }),
       async () => {
         const entries = await btcByIdEntries()
 
@@ -163,7 +163,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'resolves a known asset by slug',
-      { annotation: [{ type: 'test-case-id', description: '53' }, severity(Severity.CRITICAL)] },
+      severity(Severity.CRITICAL, { type: 'test-case-id', description: '53' }),
       async () => {
         const client = createCmcClient()
 
@@ -175,7 +175,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'symbol returns every asset sharing that ticker',
-      { annotation: [{ type: 'test-case-id', description: '54' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '54' }),
       async () => {
         const client = createCmcClient()
 
@@ -190,7 +190,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'symbol lookup is case-insensitive',
-      { annotation: [{ type: 'test-case-id', description: '55' }, severity(Severity.MINOR)] },
+      severity(Severity.MINOR, { type: 'test-case-id', description: '55' }),
       async () => {
         const client = createCmcClient()
 
@@ -203,7 +203,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'resolves multiple comma-separated ids in one call',
-      { annotation: [{ type: 'test-case-id', description: '56' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '56' }),
       async () => {
         const client = createCmcClient()
 
@@ -215,7 +215,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'resolves multiple comma-separated slugs in one call',
-      { annotation: [{ type: 'test-case-id', description: '57' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '57' }),
       async () => {
         const client = createCmcClient()
 
@@ -227,7 +227,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'rejects a request with no identifier param',
-      { annotation: [{ type: 'test-case-id', description: '58' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '58' }),
       async () => {
         const client = createCmcClient()
 
@@ -237,7 +237,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'rejects id and symbol supplied together',
-      { annotation: [{ type: 'test-case-id', description: '59' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '59' }),
       async () => {
         const client = createCmcClient()
 
@@ -249,7 +249,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'an unknown id on its own is rejected',
-      { annotation: [{ type: 'test-case-id', description: '60' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '60' }),
       async () => {
         const client = createCmcClient()
 
@@ -259,7 +259,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'an unknown slug is rejected',
-      { annotation: [{ type: 'test-case-id', description: '61' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '61' }),
       async () => {
         const client = createCmcClient()
 
@@ -269,7 +269,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'an unknown symbol returns an empty result, not an error',
-      { annotation: [{ type: 'test-case-id', description: '62' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '62' }),
       async () => {
         const client = createCmcClient()
 
@@ -281,7 +281,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'unresolvable ids in a list are dropped by default',
-      { annotation: [{ type: 'test-case-id', description: '63' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '63' }),
       async () => {
         const client = createCmcClient()
 
@@ -293,7 +293,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'skipInvalid=false rejects a list with an unresolvable id',
-      { annotation: [{ type: 'test-case-id', description: '64' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '64' }),
       async () => {
         const client = createCmcClient()
 
@@ -305,7 +305,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       `a list of ${MAX_IDS_PER_CALL} ids is accepted`,
-      { annotation: [{ type: 'test-case-id', description: '65' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '65' }),
       async () => {
         const entries = await fullIdRangeEntries()
 
@@ -316,7 +316,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       `a list of ${MAX_IDS_PER_CALL + 1} ids is rejected`,
-      { annotation: [{ type: 'test-case-id', description: '66' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '66' }),
       async () => {
         const client = createCmcClient()
 
@@ -328,7 +328,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'no convert returns a single USD quote',
-      { annotation: [{ type: 'test-case-id', description: '67' }, severity(Severity.CRITICAL)] },
+      severity(Severity.CRITICAL, { type: 'test-case-id', description: '67' }),
       async () => {
         const entries = await btcByIdEntries()
         const entry = onlyEntry(entries)
@@ -340,7 +340,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'convert to a fiat currency returns a quote in that currency',
-      { annotation: [{ type: 'test-case-id', description: '68' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '68' }),
       async () => {
         const client = createCmcClient()
 
@@ -354,7 +354,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'convert to a cryptocurrency returns a quote in that crypto',
-      { annotation: [{ type: 'test-case-id', description: '69' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '69' }),
       async () => {
         const client = createCmcClient()
 
@@ -368,7 +368,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'convertId resolves a quote in the requested currency',
-      { annotation: [{ type: 'test-case-id', description: '70' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '70' }),
       async () => {
         const client = createCmcClient()
 
@@ -382,7 +382,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'convert and convertId together are rejected',
-      { annotation: [{ type: 'test-case-id', description: '71' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '71' }),
       async () => {
         const client = createCmcClient()
 
@@ -398,7 +398,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'an unknown convert currency is rejected',
-      { annotation: [{ type: 'test-case-id', description: '72' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '72' }),
       async () => {
         const client = createCmcClient()
 
@@ -410,7 +410,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'Basic plan rejects more than one convert currency',
-      { annotation: [{ type: 'test-case-id', description: '73' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '73' }),
       async () => {
         const client = createCmcClient()
 
@@ -422,7 +422,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'no aux returns the default supplemental fields',
-      { annotation: [{ type: 'test-case-id', description: '74' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '74' }),
       async () => {
         const entries = await btcByIdEntries()
         const entry = onlyEntry(entries)
@@ -434,7 +434,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'aux limits supplemental fields to those requested',
-      { annotation: [{ type: 'test-case-id', description: '75' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '75' }),
       async () => {
         const client = createCmcClient()
 
@@ -449,7 +449,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'an unknown aux value is rejected',
-      { annotation: [{ type: 'test-case-id', description: '76' }, severity(Severity.NORMAL)] },
+      severity(Severity.NORMAL, { type: 'test-case-id', description: '76' }),
       async () => {
         const client = createCmcClient()
 
@@ -461,7 +461,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       'a quote carries price, market and percent-change metrics',
-      { annotation: [{ type: 'test-case-id', description: '77' }, severity(Severity.CRITICAL)] },
+      severity(Severity.CRITICAL, { type: 'test-case-id', description: '77' }),
       async () => {
         const entries = await btcByIdEntries()
         const entry = onlyEntry(entries)
@@ -483,7 +483,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       `creditCount is 1 for up to ${RESULTS_PER_CREDIT} results`,
-      { annotation: [{ type: 'test-case-id', description: '81' }, severity(Severity.MINOR)] },
+      severity(Severity.MINOR, { type: 'test-case-id', description: '81' }),
       async () => {
         const client = createCmcClient()
         const ids = await resolvableIds(RESULTS_PER_CREDIT)
@@ -497,7 +497,7 @@ test.describe('CoinMarketCap API', () => {
 
     test(
       `creditCount rounds up past ${RESULTS_PER_CREDIT} results`,
-      { annotation: [{ type: 'test-case-id', description: '82' }, severity(Severity.MINOR)] },
+      severity(Severity.MINOR, { type: 'test-case-id', description: '82' }),
       async () => {
         const client = createCmcClient()
         const ids = await resolvableIds(RESULTS_PER_CREDIT + 1)

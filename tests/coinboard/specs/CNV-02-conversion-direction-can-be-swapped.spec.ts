@@ -44,7 +44,7 @@ async function expectResultFits(converterPage: ConverterPage) {
 }
 
 test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter', '@CNV-02'] }, () => {
-  test('User sees the Swap action on the Converter page', { annotation: severity(Severity.BLOCKER) }, async ({ converterPage }) => {
+  test('User sees the Swap action on the Converter page', severity(Severity.BLOCKER), async ({ converterPage }) => {
     await converterPage.goto()
 
     await expect(converterPage.swap).toBeVisible()
@@ -54,7 +54,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     expect(swap).toBeLessThan(to)
   })
 
-  test('Swapping the default pair converts US dollars to Bitcoin', { annotation: severity(Severity.CRITICAL) }, async ({ converterPage }) => {
+  test('Swapping the default pair converts US dollars to Bitcoin', severity(Severity.CRITICAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expectCurrencies(converterPage, BITCOIN, US_DOLLAR)
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
@@ -65,7 +65,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     await expect(converterPage.result).toHaveText(SWAPPED_DEFAULT_RESULT)
   })
 
-  test('Swapping keeps a changed Amount and converts it in the new direction', { annotation: severity(Severity.CRITICAL) }, async ({ converterPage }) => {
+  test('Swapping keeps a changed Amount and converts it in the new direction', severity(Severity.CRITICAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
     await converterPage.typeAmount('12')
@@ -78,7 +78,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     await expect(converterPage.result).toHaveText(TWELVE_USD)
   })
 
-  test('Swapping two coins exchanges them', { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+  test('Swapping two coins exchanges them', severity(Severity.NORMAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
     await converterPage.choose('from', BNB)
@@ -91,7 +91,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     await expect(converterPage.result).toHaveText('1 USDT = 0.0013680585 BNB')
   })
 
-  test('Swapping twice restores the original direction', { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+  test('Swapping twice restores the original direction', severity(Severity.NORMAL), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
     await converterPage.typeAmount('12')
@@ -111,7 +111,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
   })
 
   for (const { name, amount, error } of INVALID_ROWS) {
-    test(`Swapping with an invalid Amount swaps the currencies and keeps the error: ${name}`, { annotation: severity(Severity.NORMAL) }, async ({ converterPage }) => {
+    test(`Swapping with an invalid Amount swaps the currencies and keeps the error: ${name}`, severity(Severity.NORMAL), async ({ converterPage }) => {
       await converterPage.goto()
       await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
       await converterPage.typeAmount(amount)
@@ -127,7 +127,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     })
   }
 
-  test('Swapping the same currency on both sides changes nothing', { annotation: severity(Severity.MINOR) }, async ({ converterPage }) => {
+  test('Swapping the same currency on both sides changes nothing', severity(Severity.MINOR), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
     await converterPage.choose('to', BITCOIN)
@@ -140,7 +140,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     await expect(converterPage.alert).toHaveCount(0)
   })
 
-  test('Swapping after From fell back to the top-ranked coin swaps the coin shown', { annotation: severity(Severity.NORMAL) }, async ({ converterPage, serveSnapshot }) => {
+  test('Swapping after From fell back to the top-ranked coin swaps the coin shown', severity(Severity.NORMAL), async ({ converterPage, serveSnapshot }) => {
     await serveSnapshot(WITHOUT_BITCOIN)
     await converterPage.goto()
     await expect(converterPage.selectedOption('from')).toHaveText(ETHEREUM)
@@ -153,7 +153,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     await expect(converterPage.alert).toHaveCount(0)
   })
 
-  test('Swap works with Enter and Space and keeps focus', { annotation: severity(Severity.NORMAL) }, async ({ converterPage, page }) => {
+  test('Swap works with Enter and Space and keeps focus', severity(Severity.NORMAL), async ({ converterPage, page }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -178,7 +178,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     })
   })
 
-  test('Result after a swap is in a polite live region', { annotation: severity(Severity.MINOR) }, async ({ converterPage }) => {
+  test('Result after a swap is in a polite live region', severity(Severity.MINOR), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveJSProperty('tagName', 'OUTPUT')
     await expect(converterPage.result).toHaveAttribute('aria-live', 'polite')
@@ -190,7 +190,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     await expect(converterPage.result).toHaveText(SWAPPED_DEFAULT_RESULT)
   })
 
-  test('Double-clicking Swap swaps twice and leaves the direction unchanged', { annotation: severity(Severity.MINOR) }, async ({ converterPage }) => {
+  test('Double-clicking Swap swaps twice and leaves the direction unchanged', severity(Severity.MINOR), async ({ converterPage }) => {
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
 
@@ -200,7 +200,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)
   })
 
-  test("Swapping doesn't change the address and Back leaves the Converter", { annotation: severity(Severity.NORMAL) }, async ({ converterPage, page }) => {
+  test("Swapping doesn't change the address and Back leaves the Converter", severity(Severity.NORMAL), async ({ converterPage, page }) => {
     await test.step('open the Converter from the home page', async () => {
       await page.goto('#/')
       await expect(page).toHaveURL(/#\/$/)
@@ -221,7 +221,7 @@ test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter
     })
   })
 
-  test('Result fits within the page on a narrow screen in both directions', { annotation: severity(Severity.MINOR) }, async ({ converterPage, page }) => {
+  test('Result fits within the page on a narrow screen in both directions', severity(Severity.MINOR), async ({ converterPage, page }) => {
     await page.setViewportSize(NARROW_VIEWPORT)
     await converterPage.goto()
     await expect(converterPage.result).toHaveText(DEFAULT_RESULT)

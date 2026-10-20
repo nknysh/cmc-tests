@@ -28,7 +28,7 @@ const CURRENCY_USD = 'USD'
 const CURRENCY_ID_USD = '2781'
 const PRECISION = 2
 
-test.describe('fetchSimplePrice consumer contract — GET /v2/simple/price', { annotation: severity(Severity.CRITICAL) }, () => {
+test.describe('fetchSimplePrice consumer contract — GET /v2/simple/price', severity(Severity.CRITICAL), () => {
   let stub: FetchStub | undefined
 
   useTestCaseIds({ required: false })

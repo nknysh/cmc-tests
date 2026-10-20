@@ -7,7 +7,7 @@ const SYMBOL_BTC = 'BTC'
 const { min: BTC_PRICE_MIN, max: BTC_PRICE_MAX } = readBtcPriceWindow()
 
 test.describe('CoinMarketCap BTC Price', () => {
-  test('BTC price is within expected range', { annotation: severity(Severity.BLOCKER) }, async () => {
+  test('BTC price is within expected range', severity(Severity.BLOCKER), async () => {
     const client = createCmcClient()
     const btc = await client.fetchPrice(SYMBOL_BTC)
 

@@ -36,7 +36,7 @@ async function expectPairShown(comparePage: ComparePage, first: string, second: 
 }
 
 test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', '@CMP-03'] }, () => {
-  test('Choosing a First coin puts both coins\' slugs in the address', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, page }) => {
+  test('Choosing a First coin puts both coins\' slugs in the address', severity(Severity.CRITICAL), async ({ comparePage, page }) => {
     await comparePage.goto()
     await expect(page).toHaveURL(/#\/compare$/)
 
@@ -44,7 +44,7 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
     await expectPairInAddress(comparePage, 'bnb', 'ethereum')
   })
 
-  test('Choosing only a Second coin keeps the default First coin\'s slug in the address', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Choosing only a Second coin keeps the default First coin\'s slug in the address', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto()
     await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
     await expect(comparePage.coinHeader('second')).toHaveText('Ethereum')
@@ -53,13 +53,13 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
     await expectPairInAddress(comparePage, 'bitcoin', 'tether')
   })
 
-  test('User opening a shared address sees that pair with a as First coin', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
+  test('User opening a shared address sees that pair with a as First coin', severity(Severity.CRITICAL), async ({ comparePage }) => {
     await comparePage.goto('?a=bnb&b=tether')
 
     await expectPairShown(comparePage, BNB, TETHER)
   })
 
-  test('Reloading the page keeps the chosen pair', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, page }) => {
+  test('Reloading the page keeps the chosen pair', severity(Severity.NORMAL), async ({ comparePage, page }) => {
     await test.step('choose BNB as First coin', async () => {
       await comparePage.goto()
       await expect(comparePage.table).toBeVisible()
@@ -73,26 +73,26 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
     })
   })
 
-  test('Address without a uses the top-ranked coin as First coin', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Address without a uses the top-ranked coin as First coin', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?b=bnb')
 
     await expectPairShown(comparePage, BITCOIN, BNB)
   })
 
-  test('Address without b uses the second-ranked coin as Second coin', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Address without b uses the second-ranked coin as Second coin', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=tether')
 
     await expectPairShown(comparePage, TETHER, ETHEREUM)
   })
 
-  test('Address without a uses the top-ranked coin when Ethereum is ranked above Bitcoin', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, serveSnapshot }) => {
+  test('Address without a uses the top-ranked coin when Ethereum is ranked above Bitcoin', severity(Severity.NORMAL), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(ETHEREUM_RANKED_FIRST)
     await comparePage.goto('?b=bnb')
 
     await expectPairShown(comparePage, ETHEREUM, BNB)
   })
 
-  test('Address without b uses the second-ranked coin when Ethereum is ranked above Bitcoin', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, serveSnapshot }) => {
+  test('Address without b uses the second-ranked coin when Ethereum is ranked above Bitcoin', severity(Severity.NORMAL), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(ETHEREUM_RANKED_FIRST)
     await comparePage.goto('?a=tether')
 
@@ -100,7 +100,7 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
   })
 
   for (const { query, first, second } of FALLBACK_ROWS) {
-    test(`Address naming a coin not in the snapshot falls back to that choice's default: ${query}`, { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+    test(`Address naming a coin not in the snapshot falls back to that choice's default: ${query}`, severity(Severity.NORMAL), async ({ comparePage }) => {
       await comparePage.goto(query)
 
       await expectPairShown(comparePage, first, second)
@@ -108,7 +108,7 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
     })
   }
 
-  test('Choosing a coin after a fallback replaces the unknown slug in the address', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Choosing a coin after a fallback replaces the unknown slug in the address', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=not-a-coin&b=tether')
     await expect(comparePage.selectedOption('first')).toHaveText(BITCOIN)
 
@@ -117,7 +117,7 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
     await expectPairShown(comparePage, BITCOIN, BNB)
   })
 
-  test('Address naming the same coin twice shows the pick-two-different-coins message', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Address naming the same coin twice shows the pick-two-different-coins message', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=bnb&b=bnb')
 
     await expect(comparePage.alert).toHaveText(SAME_COIN_MESSAGE)
@@ -126,7 +126,7 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
     await expect(comparePage.selectedOption('second')).toHaveText(BNB)
   })
 
-  test('Back leaves the Compare page after several coin changes', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, page }) => {
+  test('Back leaves the Compare page after several coin changes', severity(Severity.NORMAL), async ({ comparePage, page }) => {
     await test.step('open Compare from the home page', async () => {
       await page.goto('#/')
       await expect(page).toHaveURL(/#\/$/)
@@ -150,7 +150,7 @@ test.describe('CMP-03: Comparison can be shared as a link', { tag: ['@compare', 
     })
   })
 
-  test('Compare link in the main navigation opens the default pair', { annotation: severity(Severity.NORMAL) }, async ({ comparePage, page }) => {
+  test('Compare link in the main navigation opens the default pair', severity(Severity.NORMAL), async ({ comparePage, page }) => {
     await page.goto('#/')
     await expect(page).toHaveURL(/#\/$/)
     await expect(comparePage.navLink).toHaveAttribute('href', '#/compare')

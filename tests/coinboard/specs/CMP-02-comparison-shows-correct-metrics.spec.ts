@@ -57,7 +57,7 @@ async function expectDetailsMatch(coinPage: CoinPage, { values, states }: CoinCo
 }
 
 test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@CMP-02'] }, () => {
-  test('Comparison lists the ten metrics in the specified order', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
+  test('Comparison lists the ten metrics in the specified order', severity(Severity.CRITICAL), async ({ comparePage }) => {
     await comparePage.goto()
 
     await expect(comparePage.bodyRows()).toHaveCount(COMPARE_METRICS.length)
@@ -68,35 +68,35 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     }
   })
 
-  test('Rank shows as a hash sign followed by the rank number', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Rank shows as a hash sign followed by the rank number', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=bnb&b=tether')
 
     await expect(comparePage.cell('Rank', 'first')).toHaveText('#4')
     await expect(comparePage.cell('Rank', 'second')).toHaveText('#3')
   })
 
-  test('Price of one dollar or more shows in price format', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage }) => {
+  test('Price of one dollar or more shows in price format', severity(Severity.CRITICAL), async ({ comparePage }) => {
     await comparePage.goto()
 
     await expect(comparePage.cell('Price', 'first')).toHaveText('$82,074.63')
     await expect(comparePage.cell('Price', 'second')).toHaveText('$2,417.21')
   })
 
-  test('Price below one dollar shows four significant digits', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Price below one dollar shows four significant digits', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=tether&b=bitcoin')
 
     await expect(comparePage.cell('Price', 'first')).toHaveText('$0.999')
     await expect(comparePage.cell('Price', 'second')).toHaveText('$82,074.63')
   })
 
-  test('Price below one cent keeps four significant digits after the leading zeros', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Price below one cent keeps four significant digits after the leading zeros', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=pepe&b=tron')
 
     await expect(comparePage.cell('Price', 'first')).toHaveText('$0.000004099')
     await expect(comparePage.cell('Price', 'second')).toHaveText('$0.3302')
   })
 
-  test('Market cap and 24h volume show in compact USD', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Market cap and 24h volume show in compact USD', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto()
 
     await expect(comparePage.cell('Market cap', 'first')).toHaveText('$1.65T')
@@ -105,7 +105,7 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     await expect(comparePage.cell('Volume (24h)', 'second')).toHaveText('$18.63B')
   })
 
-  test('Values below one billion show in millions in compact USD', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Values below one billion show in millions in compact USD', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=pepe&b=tron')
 
     await expect(comparePage.cell('Volume (24h)', 'first')).toHaveText('$297.73M')
@@ -113,7 +113,7 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     await expect(comparePage.cell('Market cap', 'first')).toHaveText('$1.7B')
   })
 
-  test('Positive change shows a plus sign and the up state', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Positive change shows a plus sign and the up state', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=bitcoin&b=tether')
 
     await expect(comparePage.cell('1h change', 'first')).toHaveText('+1.49%')
@@ -124,7 +124,7 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     await expect(comparePage.cell('24h change', 'second')).toContainClass('up')
   })
 
-  test('Negative change shows a minus sign and the down state', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Negative change shows a minus sign and the down state', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto()
 
     await expect(comparePage.cell('7d change', 'first')).toHaveText('-0.27%')
@@ -135,14 +135,14 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     await expect(comparePage.cell('7d change', 'second')).toContainClass('down')
   })
 
-  test('Negative change that rounds to zero shows -0.00% and the down state', { annotation: severity(Severity.MINOR) }, async ({ comparePage }) => {
+  test('Negative change that rounds to zero shows -0.00% and the down state', severity(Severity.MINOR), async ({ comparePage }) => {
     await comparePage.goto('?a=paypal-usd&b=bitcoin')
 
     await expect(comparePage.cell('1h change', 'first')).toHaveText('-0.00%')
     await expect(comparePage.cell('1h change', 'first')).toContainClass('down')
   })
 
-  test('Exactly zero change shows 0.00% and the flat state', { annotation: severity(Severity.MINOR) }, async ({ comparePage, serveSnapshot }) => {
+  test('Exactly zero change shows 0.00% and the flat state', severity(Severity.MINOR), async ({ comparePage, serveSnapshot }) => {
     await serveSnapshot(BITCOIN_FLAT_1H)
     await comparePage.goto()
 
@@ -152,7 +152,7 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     await expect(comparePage.cell('1h change', 'second')).toContainClass('up')
   })
 
-  test('Supplies show rounded whole numbers with thousands separators and no symbol', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Supplies show rounded whole numbers with thousands separators and no symbol', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto('?a=bitcoin&b=bnb')
 
     await expect(comparePage.cell('Circulating supply', 'first')).toHaveText('20,098,671')
@@ -166,14 +166,14 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     }
   })
 
-  test('Coin without a max supply shows Max supply as infinity', { annotation: severity(Severity.NORMAL) }, async ({ comparePage }) => {
+  test('Coin without a max supply shows Max supply as infinity', severity(Severity.NORMAL), async ({ comparePage }) => {
     await comparePage.goto()
 
     await expect(comparePage.cell('Max supply', 'second')).toHaveText(NO_MAX_SUPPLY)
     await expect(comparePage.cell('Max supply', 'first')).toHaveText('21,000,000')
   })
 
-  test('Every Bitcoin value in the comparison matches the Bitcoin details page', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, coinPage }) => {
+  test('Every Bitcoin value in the comparison matches the Bitcoin details page', severity(Severity.CRITICAL), async ({ comparePage, coinPage }) => {
     const bitcoin = await test.step('read the Bitcoin column of the comparison', async () => {
       await comparePage.goto('?a=bitcoin&b=tether')
       await expect(comparePage.coinHeader('first')).toHaveText('Bitcoin')
@@ -190,7 +190,7 @@ test.describe('CMP-02: Comparison shows correct metrics', { tag: ['@compare', '@
     })
   })
 
-  test('Every Tether USDt value in the comparison matches the Tether USDt details page', { annotation: severity(Severity.CRITICAL) }, async ({ comparePage, coinPage }) => {
+  test('Every Tether USDt value in the comparison matches the Tether USDt details page', severity(Severity.CRITICAL), async ({ comparePage, coinPage }) => {
     const tether = await test.step('read the Tether USDt column of the comparison', async () => {
       await comparePage.goto('?a=bitcoin&b=tether')
       await expect(comparePage.coinHeader('second')).toHaveText('Tether USDt')

@@ -26,7 +26,7 @@ const IDS_BTC_USDC = QUOTES_LATEST_V3_IDS.join(',')
 const CURRENCY_ID_USD = '2781'
 const AUX_FIELDS = 'cmc_rank,platform'
 
-test.describe('fetchQuotesLatest consumer contract — GET /v3/cryptocurrency/quotes/latest', { annotation: severity(Severity.CRITICAL) }, () => {
+test.describe('fetchQuotesLatest consumer contract — GET /v3/cryptocurrency/quotes/latest', severity(Severity.CRITICAL), () => {
   let stub: FetchStub | undefined
 
   test.afterEach(() => {

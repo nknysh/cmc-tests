@@ -25,7 +25,7 @@ const GAINERS_LOSERS_PATH = '/v1/cryptocurrency/trending/gainers-losers'
 const LIMIT = '2'
 const ERROR_CODE_PLAN_NOT_SUPPORTED = 1006
 
-test.describe('Trending Gainers & Losers provider contract — GET /v1/cryptocurrency/trending/gainers-losers', { annotation: severity(Severity.BLOCKER) }, () => {
+test.describe('Trending Gainers & Losers provider contract — GET /v1/cryptocurrency/trending/gainers-losers', severity(Severity.BLOCKER), () => {
   useTestCaseIds({ required: false })
 
   test(

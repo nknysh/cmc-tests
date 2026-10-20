@@ -23,7 +23,7 @@ const SIMPLE_PRICE_PATH = '/v2/simple/price'
 const CMC_ID_BTC = '1'
 const CURRENCY_USD = 'USD'
 
-test.describe('Simple Price provider contract — GET /v2/simple/price', { annotation: severity(Severity.BLOCKER) }, () => {
+test.describe('Simple Price provider contract — GET /v2/simple/price', severity(Severity.BLOCKER), () => {
   useTestCaseIds({ required: false })
 
   test('a response without include flags matches the client contract', async ({ request }) => {

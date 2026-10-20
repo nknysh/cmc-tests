@@ -223,15 +223,16 @@ CI failure output and the HTML report.
 ## Declare a Severity
 
 Every test declares an Allure severity: how bad it is when *this* test
-fails. Use the `severity()` annotation from `tests/helpers/severity.ts`,
-either on the test or on its `test.describe` when every test in the group
+fails. Pass `severity()` from `tests/helpers/severity.ts` as the test details
+(it adds the severity annotation and a matching `@blocker`/`@critical`/... tag
+for `--grep`), either on the test or on its `test.describe` when every test in the group
 shares a level. Never use both on the same test, because that gives it two
 severity labels.
 
 ```typescript
 test(
   'an invalid API key is rejected',
-  { annotation: [{ type: 'test-case-id', description: '20' }, severity(Severity.BLOCKER)] },
+  severity(Severity.BLOCKER, { type: 'test-case-id', description: '20' }),
   async () => { /* ... */ },
 )
 ```

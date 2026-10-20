@@ -16,7 +16,7 @@ const QUOTES_LATEST_PATH = '/v2/cryptocurrency/quotes/latest'
 const SYMBOL_BTC = 'BTC'
 const CURRENCY_USD = 'USD'
 
-test.describe('Quotes Latest provider contract — GET /v2/cryptocurrency/quotes/latest', { annotation: severity(Severity.BLOCKER) }, () => {
+test.describe('Quotes Latest provider contract — GET /v2/cryptocurrency/quotes/latest', severity(Severity.BLOCKER), () => {
   test('a successful response matches the client contract', async ({ request }) => {
     const apiKey = requireEnv('CMC_API_KEY')
 

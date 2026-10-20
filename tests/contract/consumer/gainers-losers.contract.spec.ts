@@ -25,7 +25,7 @@ const LIMIT = 2
 const CURRENCY_USD = 'USD'
 const CURRENCY_ID_USD = '2781'
 
-test.describe('fetchGainersLosers consumer contract — GET /v1/cryptocurrency/trending/gainers-losers', { annotation: severity(Severity.CRITICAL) }, () => {
+test.describe('fetchGainersLosers consumer contract — GET /v1/cryptocurrency/trending/gainers-losers', severity(Severity.CRITICAL), () => {
   let stub: FetchStub | undefined
 
   useTestCaseIds({ required: false })

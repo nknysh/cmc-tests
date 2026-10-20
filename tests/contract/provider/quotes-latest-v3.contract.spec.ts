@@ -16,7 +16,7 @@ import { requireEnv } from '../helpers/requireEnv'
 
 const QUOTES_LATEST_V3_PATH = '/v3/cryptocurrency/quotes/latest'
 
-test.describe('Quotes Latest v3 provider contract — GET /v3/cryptocurrency/quotes/latest', { annotation: severity(Severity.BLOCKER) }, () => {
+test.describe('Quotes Latest v3 provider contract — GET /v3/cryptocurrency/quotes/latest', severity(Severity.BLOCKER), () => {
   useTestCaseIds({ required: false })
 
   test('a successful response matches the client contract', async ({ request }) => {
