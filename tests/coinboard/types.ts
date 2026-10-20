@@ -45,8 +45,8 @@ export const isChangeState = (name: string): name is ChangeState => (CHANGE_STAT
 /** How the app shows the Max supply of a coin that has none. */
 export const NO_MAX_SUPPLY = '∞'
 
-/** Which currency select of the converter. */
-export type Currency = 'from' | 'to'
+/** Which side of the conversion, and so which currency select of the converter: From or To. */
+export type ConverterSide = 'from' | 'to'
 
 /** Pepe, the fixture's coin with the smallest price, for very small and very large converter results. */
 export const PEPE = 'Pepe (PEPE)'

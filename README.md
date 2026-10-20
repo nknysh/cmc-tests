@@ -4,7 +4,7 @@ Automated API, contract, performance and end-to-end tests for [CoinMarketCap](ht
 
 ## CoinBoard demo app
 
-[CoinBoard](https://nknysh.github.io/cmc-tests/app/) is a small React app showing the top 100 coins from CoinMarketCap, built as a target for Playwright UI tests. It covers a market table with search, sorting, filters, paging and CSV export; coin detail pages with a price chart; and a converter, coin comparison, watchlist and portfolio. A daily workflow fetches one `listings/latest` snapshot (1 API credit) and publishes it as static JSON, so the API key never reaches the browser. Run it locally with `cd app && npm install && npm run dev`; it uses committed fixture data, so no key is needed.
+[CoinBoard](https://nknysh.github.io/cmc-tests/app/) is a small React app showing the top 100 coins from CoinMarketCap, built as a target for Playwright UI tests. It covers a market table with search, sorting, filters, paging and CSV export; coin detail pages with a price chart; and a converter, coin comparison, watchlist and portfolio. A daily workflow fetches one `listings/latest` snapshot (1 API credit) and publishes it as static JSON, so the API key never reaches the browser. A snapshot with any price of 0 or below is rejected whole and the last accepted one stays published; the app also falls back to that one if it ever loads an invalid price. Run it locally with `cd app && npm install && npm run dev`; it uses committed fixture data, so no key is needed.
 
 CoinBoard is developed in four steps, each building on the one before:
 
@@ -13,16 +13,18 @@ CoinBoard is developed in four steps, each building on the one before:
 3. **Test cases.** A story's test cases go in a `.test.md` file next to it, written for automation. Each case gives its preconditions, the exact data it uses and steps with checkable expected results, and covers named acceptance criteria.
 4. **Autotests.** Each `.test.md` file becomes a Playwright spec in [`tests/coinboard/specs/`](tests/coinboard/specs), one test per case, with the same titles and severities.
 
-For example, the Compare stories (`CMP-01` to `CMP-03`) have test cases, and `CMP-01` is automated as [`CMP-01-two-coins-can-be-compared.spec.ts`](tests/coinboard/specs/CMP-01-two-coins-can-be-compared.spec.ts).
+So far the Compare stories (`CMP-01` to `CMP-03`) and the Converter stories (`CNV-01`, `CNV-02`) have test cases, and all five are automated, 100 tests in all. For example, `CMP-01` is automated as [`CMP-01-two-coins-can-be-compared.spec.ts`](tests/coinboard/specs/CMP-01-two-coins-can-be-compared.spec.ts).
 
 ### CoinBoard UI tests
 
 The specs in `tests/coinboard/` run in their own Playwright project, `coinboard`:
 
-- **Data:** every test serves the committed snapshot (or a stub built from it) as the app's data, so results don't depend on the live market.
+- **Data:** every test serves the committed snapshot (or a stub built from it) as the app's data, so results don't depend on the live market and no API key is needed.
+- **Page objects:** `tests/coinboard/pages/` holds one page object per page under test (`ComparePage`, `CoinPage`, `ConverterPage`), each provided to specs as a fixture.
 - **Browser errors:** a test fails if the app throws an uncaught error or logs a `console.error`, even when every assertion passed. The errors are attached to the report.
+- **DOM snapshot:** every failing test gets a compact snapshot of the page's DOM attached, which the locator self-heal uses as its input.
 - **Dev server:** any run that includes the project starts the app's Vite dev server. To test a running or deployed app instead, set `COINBOARD_URL`.
-- **CI:** the [CoinBoard UI Tests workflow](.github/workflows/coinboard-tests.yml) runs the whole project on pushes and pull requests that change the app or its tests. It publishes the Allure report on every run except pull requests.
+- **CI:** the [CoinBoard UI Tests workflow](.github/workflows/coinboard-tests.yml) runs the whole project through the locator self-heal on pushes to `main` and pull requests that change the app, its tests or the heal agents. It publishes the Allure report on every run except pull requests.
 
 ## Allure reports
 
@@ -61,18 +63,17 @@ Each suite also has an Allure quality gate (`allurerc.mjs`). It fails the run on
 **Code quality**
 - ESLint with typescript-eslint and eslint-plugin-playwright
 - Husky pre-commit hook running lint and an AI code review (`claude -p` with the `typescript-code-review` skill)
-- SonarQube Cloud static analysis on every push to `main` and every PR, failing the check when the quality gate fails
+- SonarQube Cloud static analysis on every push to `main`, every PR and on demand, failing the check when the quality gate fails
 
 **CI/CD**
-- GitHub Actions: scheduled and manually triggered workflows for API and contract tests, the k6 performance baseline, and the BTC price window
-- GitHub Actions: CoinBoard UI tests (with the locator self-heal) on every push and pull request that touches the app or its tests, and a daily CoinBoard deploy
+- GitHub Actions: six workflows, listed under [CI workflows](#ci-workflows)
 
 **Self-healing agents**
 - BTC price window: recentres the expected price range when the live price drifts outside it, after checks in code (positive price, unchanged width, a shift of at most 10%)
 - CoinBoard locators: when the app's markup changes and a CoinBoard UI test can't find an element, repairs the page object using a local LLM (Qwen2.5-Coder-7B-Instruct GGUF via `node-llama-cpp`, no external API), re-runs the suite, has a second local-model pass audit the patch, and commits it to the branch under test
 
 **AI tooling**
-- Claude Code with project skills (`api-testing`, `e2e-testing`) and the Playwright MCP server (`@playwright/mcp`)
+- Claude Code with project skills (`api-testing`, `e2e-testing`, `test-design`, `typescript-code-review`), global QA skills for designing, automating and debugging tests, and the Playwright MCP server (`@playwright/mcp`)
 
 **Other**
 - `dotenv` for environment configuration
@@ -97,8 +98,9 @@ npm run test:coinboard  # CoinBoard UI specs (starts the app's dev server)
 npm run test:perf       # k6 latency baseline (needs the k6 binary and CMC_API_KEY exported)
 npm run test:ui         # Playwright UI mode
 npm run test:headed     # headed browser
+npm run test:report     # open the last Playwright HTML report
 
-npm run test:allure       # run each Playwright suite, then build its own Allure report
+npm run test:allure       # run each Playwright suite, then build its own Allure report (not perf)
 npm run allure:api        # build allure-report/api/ from allure-results/api/
 npm run allure:contract   # build allure-report/contract/
 npm run allure:btc-price  # build allure-report/btc-price/
@@ -108,8 +110,25 @@ ALLURE_SUITE=api npm run allure:open  # open one suite's report
 ALLURE_SUITE=api npm run allure:gate  # check one suite's results against its quality gate
 
 npm run lint            # ESLint
+npm run lint:fix        # ESLint with autofix
 npx tsc --noEmit        # type-check
+npm run code-review     # the pre-commit AI review of uncommitted TypeScript changes
+
+npm run snapshot -- <outDir> [previousHistory]  # write a CoinBoard snapshot (1 API credit, needs CMC_API_KEY)
 ```
+
+## CI workflows
+
+| Workflow | When it runs | What it does |
+|---|---|---|
+| [API Tests](.github/workflows/api-tests.yml) | every 6 hours, on demand | Contract specs, then API specs, each under its own Allure quality gate; publishes both reports |
+| [BTC price window heal](.github/workflows/btc-price-window-heal.yml) | every 4 hours, on demand | Runs the BTC price spec, whose global setup recentres the price window, and pushes the commit if it changed |
+| [Performance baseline](.github/workflows/perf-tests.yml) | daily at 03:15 UTC, on demand | k6 latency baseline; publishes the Allure report and posts the results table as the job summary |
+| [CoinBoard UI Tests](.github/workflows/coinboard-tests.yml) | pushes to `main` and PRs touching the app, its tests or the heal agents, on demand | CoinBoard UI specs through the locator self-heal; pushes any heal commit to the branch under test |
+| [CoinBoard App](.github/workflows/app-deploy.yml) | daily at 06:00 UTC, pushes to `main` touching the app or its data script, on demand | Takes a fresh snapshot, builds the app and publishes it to GitHub Pages |
+| [SonarQube Cloud](.github/workflows/sonar.yml) | pushes to `main`, every PR, on demand | Static analysis with the ESLint report imported; fails when the quality gate fails |
+
+Every workflow that publishes to `gh-pages` shares one concurrency group, so they never push to it at the same time.
 
 ## Test case viewer
 
@@ -192,16 +211,21 @@ flowchart TD
 
 ```
 app/                   CoinBoard demo app (src/, user-stories/ with stories and test cases)
+scripts/               CoinBoard snapshot script
 src/clients/           typed API clients (CoinMarketCap)
 src/db/testCases/      SQLite test case store
 src/web/testCaseViewer/ test case viewer (server + page)
+data/                  test case database
 tests/api/             API specs
 tests/contract/        contract specs (provider, consumer, fixtures)
 tests/coinboard/       CoinBoard UI specs, page objects, fixtures and snapshot stubs
+tests/helpers/         shared test helpers (CMC client factory, severity, test case ids)
 tests/perf/            k6 latency baseline
-.agents/               self-healing agents and the pre-commit review hook
+.agents/               self-healing agents, their auditor and the pre-commit review hook
+.claude/skills/        project skills for Claude Code
 .github/workflows/     CI workflows
-allurerc.mjs           Allure configuration
+.github/allure-summary/ landing page for the published Allure reports
+allurerc.mjs           Allure configuration and quality gates
 ```
 
 See [CLAUDE.md](CLAUDE.md) for detailed conventions and architecture.

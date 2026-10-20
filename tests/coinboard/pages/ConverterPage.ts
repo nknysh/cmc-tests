@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
-import type { Currency } from '../types'
+import type { ConverterSide } from '../types'
 
 /** The CoinBoard Converter page (`#/converter`). */
 export class ConverterPage {
@@ -30,23 +30,23 @@ export class ConverterPage {
     await this.heading.waitFor()
   }
 
-  select(currency: Currency): Locator {
-    return currency === 'from' ? this.from : this.to
+  select(side: ConverterSide): Locator {
+    return side === 'from' ? this.from : this.to
   }
 
   /** The options of a currency select, in list order. */
-  options(currency: Currency): Locator {
-    return this.select(currency).getByRole('option')
+  options(side: ConverterSide): Locator {
+    return this.select(side).getByRole('option')
   }
 
   /** The option a currency select shows as chosen. */
-  selectedOption(currency: Currency): Locator {
-    return this.select(currency).getByRole('option', { selected: true })
+  selectedOption(side: ConverterSide): Locator {
+    return this.select(side).getByRole('option', { selected: true })
   }
 
   /** Chooses a currency by its label, e.g. "US Dollar (USD)". */
-  async choose(currency: Currency, label: string) {
-    await this.select(currency).selectOption({ label })
+  async choose(side: ConverterSide, label: string) {
+    await this.select(side).selectOption({ label })
   }
 
   /** Clears Amount, then types `value` key by key, leaving focus in it. */
