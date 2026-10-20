@@ -99,11 +99,15 @@ export function ConverterPage() {
             onBlur={() => setAmountBlurred(true)}
             data-testid="convert-amount"
           />
-          {error && (
-            <p id="convert-amount-error" className="field-error" role="alert">
-              {error}
-            </p>
-          )}
+          {/* Holds the error's space even when there's none, so the error appearing on blur
+              doesn't move Swap from under a click that caused the blur (CNV-02/AC-6). */}
+          <div className="field-error-slot">
+            {error && (
+              <p id="convert-amount-error" className="field-error" role="alert">
+                {error}
+              </p>
+            )}
+          </div>
         </div>
         <CoinSelect label="From" testId="convert-from" coins={coins} value={fromSlug} onChange={setFrom} includeUsd />
         <button

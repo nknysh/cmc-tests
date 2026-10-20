@@ -14,7 +14,7 @@ const minTestsCount = {
   api: 43,
   contract: 36,
   // CoinBoard UI tests (tests/coinboard), one per test case in app/user-stories.
-  coinboard: 46,
+  coinboard: 100,
   // One result per k6 threshold.
   perf: 7,
 }

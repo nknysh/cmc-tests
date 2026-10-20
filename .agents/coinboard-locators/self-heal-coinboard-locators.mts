@@ -30,6 +30,7 @@ const CI_GIT_IDENTITY = ['-c', 'user.name=nknysh', '-c', 'user.email=nknysh@gmai
 const PAGE_OBJECT_FIXTURES: Readonly<Record<string, string>> = {
   comparePage: 'tests/coinboard/pages/ComparePage.ts',
   coinPage: 'tests/coinboard/pages/CoinPage.ts',
+  converterPage: 'tests/coinboard/pages/ConverterPage.ts',
 }
 
 interface TestFailure {

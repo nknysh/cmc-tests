@@ -5,6 +5,7 @@ import { fixtureSnapshot } from './data/snapshot'
 import { DOM_SNAPSHOT_ATTACHMENT, DOM_SNAPSHOT_MAX_LENGTH, serializeElement } from './domSnapshot.mts'
 import { CoinPage } from './pages/CoinPage'
 import { ComparePage } from './pages/ComparePage'
+import { ConverterPage } from './pages/ConverterPage'
 
 const LATEST_SNAPSHOT_URL = '**/data/latest.json'
 
@@ -22,6 +23,7 @@ interface CoinBoardFixtures {
   expectedBrowserErrors: RegExp[]
   comparePage: ComparePage
   coinPage: CoinPage
+  converterPage: ConverterPage
 }
 
 /** Uncaught page errors and `console.error` messages since the page opened, across navigations. */
@@ -71,6 +73,9 @@ export const test = base.extend<CoinBoardFixtures>({
   },
   coinPage: async ({ page }, use) => {
     await use(new CoinPage(page))
+  },
+  converterPage: async ({ page }, use) => {
+    await use(new ConverterPage(page))
   },
 })
 

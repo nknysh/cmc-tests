@@ -44,3 +44,17 @@ export const isChangeState = (name: string): name is ChangeState => (CHANGE_STAT
 
 /** How the app shows the Max supply of a coin that has none. */
 export const NO_MAX_SUPPLY = '∞'
+
+/** Which currency select of the converter. */
+export type Currency = 'from' | 'to'
+
+/** Pepe, the fixture's coin with the smallest price, for very small and very large converter results. */
+export const PEPE = 'Pepe (PEPE)'
+
+// The converter's Amount errors, and what its result shows while there's nothing to convert.
+export const EMPTY_AMOUNT_ERROR = 'Enter an amount of 0 or more.'
+export const MAX_AMOUNT_ERROR = 'Enter an amount up to 1,000,000,000.'
+export const NO_RESULT = '—'
+
+/** A phone-sized viewport, at or below the app's 640 px narrow-screen breakpoint. */
+export const NARROW_VIEWPORT = { width: 375, height: 812 }

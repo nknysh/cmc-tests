@@ -288,6 +288,16 @@ main {
   flex-basis: 100%;
 }
 
+/* One line of .field-error, reserved whether or not the error shows. */
+.field-error-slot {
+  --error-line-height: 1.4;
+  min-height: calc(4px + 0.85rem * var(--error-line-height));
+}
+
+.field-error-slot .field-error {
+  line-height: var(--error-line-height);
+}
+
 .check {
   display: flex;
   align-items: center;
