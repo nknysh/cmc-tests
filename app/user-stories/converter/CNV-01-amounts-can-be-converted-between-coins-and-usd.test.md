@@ -440,7 +440,7 @@ labels: Severity: minor
 
 # Long result wraps within the page on a narrow screen
 
-Covers AC-16 with the longest result the fixture can give (44 characters).
+Covers AC-16 with the longest result the fixture can give (44 characters). The page's own sideways scroll isn't checked: at this width the header's navigation can overflow by itself, depending on the platform's fonts, which says nothing about the result.
 
 Preconditions:
 
@@ -453,9 +453,8 @@ Preconditions:
 - Select "US Dollar (USD)" in **From** and "Pepe (PEPE)" in **To**
 - Type `1000000000` in **Amount**
   *Expected*: The result reads `1,000,000,000 USD = 243,957,010,000,000 PEPE`
-  *Expected*: The result's bounding box lies within the viewport width
+  *Expected*: The result is fully in view, and every line of its text lies within the viewport width
   *Expected*: The result is taller than one line of its text, so it has wrapped
-  *Expected*: `document.documentElement.scrollWidth` is not greater than `clientWidth`
 
 <!-- test
 labels: Severity: normal

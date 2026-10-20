@@ -37,10 +37,10 @@ async function expectCurrencies(converterPage: ConverterPage, from: string, to: 
   await expect(converterPage.selectedOption('to')).toHaveText(to)
 }
 
-/** Checks the result lies within a narrow viewport and the page doesn't scroll sideways. */
+/** Checks the result is fully in view, with every line of its text within a narrow viewport's width. */
 async function expectResultFits(converterPage: ConverterPage) {
+  await expect(converterPage.result).toBeInViewport({ ratio: 1 })
   await expect.poll(() => converterPage.resultOverflowsViewport()).toBe(false)
-  await expect.poll(() => converterPage.scrollsSideways()).toBe(false)
 }
 
 test.describe('CNV-02: Conversion direction can be swapped', { tag: ['@converter', '@CNV-02'] }, () => {

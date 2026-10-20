@@ -278,7 +278,7 @@ labels: Severity: minor
 
 # Result fits within the page on a narrow screen in both directions
 
-Covers AC-13 (CNV-01/AC-16) before and after a swap, with the longest result the fixture can give.
+Covers AC-13 (CNV-01/AC-16) before and after a swap, with the longest result the fixture can give. The page's own sideways scroll isn't checked: at this width the header's navigation can overflow by itself, depending on the platform's fonts, which says nothing about the result.
 
 Preconditions:
 
@@ -291,9 +291,7 @@ Preconditions:
 - Select "US Dollar (USD)" in **From** and "Pepe (PEPE)" in **To**
 - Type `1000000000` in **Amount**
   *Expected*: The result reads `1,000,000,000 USD = 243,957,010,000,000 PEPE`
-  *Expected*: The result's bounding box lies within the viewport width
-  *Expected*: `document.documentElement.scrollWidth` is not greater than `clientWidth`
+  *Expected*: The result is fully in view, and every line of its text lies within the viewport width
 - Click **Swap**
   *Expected*: The result reads `1,000,000,000 PEPE = 4,099.0829 USD`
-  *Expected*: The result's bounding box lies within the viewport width
-  *Expected*: `document.documentElement.scrollWidth` is not greater than `clientWidth`
+  *Expected*: The result is fully in view, and every line of its text lies within the viewport width

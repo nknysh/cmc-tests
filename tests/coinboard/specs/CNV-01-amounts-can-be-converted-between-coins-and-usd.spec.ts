@@ -370,9 +370,9 @@ test.describe('CNV-01: Amounts can be converted between coins and USD', { tag: [
     await converterPage.typeAmount('1000000000')
 
     await expect(converterPage.result).toHaveText('1,000,000,000 USD = 243,957,010,000,000 PEPE')
+    await expect(converterPage.result).toBeInViewport({ ratio: 1 })
     await expect.poll(() => converterPage.resultOverflowsViewport()).toBe(false)
     await expect.poll(() => converterPage.resultLineCount()).toBeGreaterThan(1)
-    await expect.poll(() => converterPage.scrollsSideways()).toBe(false)
   })
 
   test('Converter can be used from the keyboard and announces changes', { annotation: severity(Severity.NORMAL) }, async ({ converterPage, page }) => {

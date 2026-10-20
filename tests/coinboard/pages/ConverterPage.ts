@@ -72,16 +72,16 @@ export class ConverterPage {
     })
   }
 
-  /** Whether any part of the result lies outside the viewport's width. */
+  /**
+   * Whether any line of the result's text lies outside the viewport's width. Checks the text, not the
+   * `output` box, which always spans its card, so text overflowing the box is caught too.
+   */
   async resultOverflowsViewport(): Promise<boolean> {
-    const box = await this.result.boundingBox()
-    const viewport = this.page.viewportSize()
-    if (!box || !viewport) throw new Error('The result has no layout box, or the page has no fixed viewport')
-    return box.x < 0 || box.x + box.width > viewport.width
-  }
-
-  /** Whether the page is wider than the viewport, so it scrolls sideways. */
-  async scrollsSideways(): Promise<boolean> {
-    return this.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
+    return this.result.evaluate((output) => {
+      const range = document.createRange()
+      range.selectNodeContents(output)
+      const viewportWidth = document.documentElement.clientWidth
+      return [...range.getClientRects()].some((rect) => rect.left < 0 || rect.right > viewportWidth)
+    })
   }
 }
