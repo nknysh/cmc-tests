@@ -565,6 +565,8 @@ async function runSnapshotScript(fetchStub: string, outDir: string, env: Record<
     // `code` is the exit code, or a string such as 'ENOENT' when the script couldn't be started.
     const failed = error as { code?: number | string; message?: string; stdout?: string; stderr?: string }
     const code = typeof failed.code === 'number' ? failed.code : 1
-    return { code, output: `${failed.stdout ?? ''}${failed.stderr ?? ''}${failed.message ?? ''}` }
+    // The message repeats stderr when the script ran, so it's only shown when there's no output.
+    const captured = `${failed.stdout ?? ''}${failed.stderr ?? ''}`
+    return { code, output: captured || (failed.message ?? '') }
   }
 }
