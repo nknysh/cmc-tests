@@ -8,22 +8,40 @@ import type { Coin } from './types'
  * supply may be below circulating supply. Prices are APP-06's (validate.ts).
  */
 
-const NUMBER_FIELDS = [
-  'id',
-  'rank',
-  'circulatingSupply',
-  'totalSupply',
-  'price',
-  'marketCap',
-  'volume24h',
-  'marketCapDominance',
-  'percentChange1h',
-  'percentChange24h',
-  'percentChange7d',
-  'percentChange30d',
-] as const satisfies readonly (keyof Coin)[]
+type FieldType = 'number' | 'string' | 'string list' | 'number or null'
 
-const STRING_FIELDS = ['name', 'symbol', 'slug', 'dateAdded'] as const satisfies readonly (keyof Coin)[]
+/**
+ * Every Coin field and its JSON type. A Record over `keyof Coin`, so adding a
+ * field to Coin doesn't compile until it's listed here, and the shape check
+ * below can't silently skip it.
+ */
+const COIN_FIELD_TYPES: Record<keyof Coin, FieldType> = {
+  id: 'number',
+  name: 'string',
+  symbol: 'string',
+  slug: 'string',
+  rank: 'number',
+  tags: 'string list',
+  dateAdded: 'string',
+  circulatingSupply: 'number',
+  totalSupply: 'number',
+  maxSupply: 'number or null',
+  price: 'number',
+  marketCap: 'number',
+  volume24h: 'number',
+  marketCapDominance: 'number',
+  percentChange1h: 'number',
+  percentChange24h: 'number',
+  percentChange7d: 'number',
+  percentChange30d: 'number',
+}
+
+const HAS_FIELD_TYPE: Record<FieldType, (value: unknown) => boolean> = {
+  number: (value) => typeof value === 'number',
+  string: (value) => typeof value === 'string',
+  'string list': (value) => Array.isArray(value) && value.every((item) => typeof item === 'string'),
+  'number or null': (value) => value === null || typeof value === 'number',
+}
 
 /** Amounts that can't be negative; `maxSupply` too, when set. */
 const AMOUNT_FIELDS = ['circulatingSupply', 'totalSupply', 'marketCap', 'volume24h'] as const satisfies readonly (keyof Coin)[]
@@ -36,19 +54,25 @@ const MAX_DOMINANCE_PERCENT = 100
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-const isDateString = (value: unknown): value is string => typeof value === 'string' && !Number.isNaN(Date.parse(value))
+/** ISO 8601 date-time, as CoinMarketCap sends it, e.g. `2026-10-15T08:00:00.000Z`. */
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/
+
+/**
+ * Checks the format before Date.parse, which accepts other formats in ways
+ * that differ between engines, so the snapshot script (Node) and the app
+ * (browser) always agree.
+ */
+const isDateString = (value: unknown): value is string =>
+  typeof value === 'string' && ISO_DATE_TIME.test(value) && !Number.isNaN(Date.parse(value))
 
 const isPositiveInteger = (value: number): boolean => Number.isInteger(value) && value > 0
 
-/** Why `coin` doesn't have a coin's fields and types, or null when it does. */
+/** Why `coin` doesn't have every Coin field with its type, or null when it does. */
 function coinShapeProblem(coin: unknown): string | null {
   if (!isRecord(coin)) return 'is not an object'
-  const badNumber = NUMBER_FIELDS.find((field) => typeof coin[field] !== 'number')
-  if (badNumber) return `has no numeric ${badNumber}`
-  const badString = STRING_FIELDS.find((field) => typeof coin[field] !== 'string')
-  if (badString) return `has no string ${badString}`
-  if (!Array.isArray(coin.tags) || !coin.tags.every((tag) => typeof tag === 'string')) return 'has no list of tag strings'
-  if (coin.maxSupply !== null && typeof coin.maxSupply !== 'number') return 'has a maxSupply that is neither a number nor null'
+  for (const [field, type] of Object.entries(COIN_FIELD_TYPES)) {
+    if (!HAS_FIELD_TYPE[type](coin[field])) return `has a ${field} that is not a ${type}`
+  }
   return null
 }
 
@@ -66,6 +90,7 @@ function coinValueProblem(coin: Coin): string | null {
   return null
 }
 
+// The cast is safe once coinShapeProblem passes: it checks every field of Coin (see COIN_FIELD_TYPES).
 const coinProblem = (coin: unknown): string | null => coinShapeProblem(coin) ?? coinValueProblem(coin as Coin)
 
 /** The first field whose value two coins share, with that value, or null when all are unique. */
@@ -90,5 +115,6 @@ export function snapshotProblem(value: unknown): string | null {
     const problem = coinProblem(coin)
     if (problem) return `coin ${index + 1} ${problem}`
   }
+  // Every coin passed coinProblem, so each one is a Coin.
   return duplicateProblem(value.coins as Coin[])
 }

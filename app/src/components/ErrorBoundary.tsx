@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true }
   }
 
-  render() {
+  render(): ReactNode {
     return this.state.hasError ? <PageError onRetry={this.props.onRetry} /> : this.props.children
   }
 }

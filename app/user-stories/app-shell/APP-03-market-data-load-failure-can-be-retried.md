@@ -18,9 +18,9 @@
 - Market data is loaded once per visit and shared by every section; moving between sections, or back and forward in the browser, doesn't reload it. Reloading the page starts a new visit. The coin page's price history isn't part of this: it loads when a coin page opens and has its own error message and "Retry" (COIN-02). `AC-6`
 - Data that loads but is corrupt is never shown, and never leaves a blank page. A corrupt latest snapshot is handled like one with an invalid price (APP-06/AC-8 to AC-10): the app shows the previous snapshot and its price history instead, writes this to the browser console, and shows that no market data is available when there is no previous snapshot. A corrupt previous snapshot counts as a failure and shows the AC-2 message. Corrupt means any of: `AC-7`
   - the file isn't valid JSON (including an empty file);
-  - it's valid JSON but not a market snapshot: not an object, no update time or one that isn't a date, no coin list, or an empty coin list;
+  - it's valid JSON but not a market snapshot: not an object, no update time or one that isn't an ISO 8601 date and time (e.g. `2026-10-15T08:00:00.000Z`), no coin list, or an empty coin list;
   - any coin is missing a field or has a field of the wrong type (e.g. a name that isn't text, a price or percentage change that isn't a number, tags that aren't a list of text). Only the max supply may be empty;
-  - any coin has an impossible value: an id or rank that isn't a positive whole number, an empty name, symbol or slug, a date added that isn't a date, a negative supply, market cap or volume, or a market dominance outside 0–100%;
+  - any coin has an impossible value: an id or rank that isn't a positive whole number, an empty name, symbol or slug, a date added that isn't an ISO 8601 date and time, a negative supply, market cap or volume, or a market dominance outside 0–100%;
   - two coins share an id, a slug or a rank. Coins may share a symbol, since CoinMarketCap allows it.
 
   One malformed coin rejects the whole snapshot, as an invalid price does (APP-06). Prices themselves are checked by APP-06, not here.

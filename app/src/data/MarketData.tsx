@@ -22,10 +22,12 @@ const FETCH_TIMEOUT_MS = 30_000
 
 const TIMEOUT_MESSAGE = 'The server took too long to respond'
 
-const isTimeout = (error: unknown): boolean => error instanceof DOMException && error.name === 'TimeoutError'
-
-/** Aborted because the caller no longer needs the data (see useLoad); nothing to report. */
-const isCancelled = (error: unknown): boolean => error instanceof DOMException && error.name === 'AbortError'
+/**
+ * Whether the load's signal was aborted by its timeout (see useLoad). Any
+ * other abort means the caller no longer needs the data: nothing to report.
+ */
+const timedOut = (signal: AbortSignal): boolean =>
+  signal.reason instanceof DOMException && signal.reason.name === 'TimeoutError'
 
 /** A file that loaded but is corrupt: not valid JSON, or not a valid snapshot (APP-03/AC-7). */
 class InvalidDataError extends Error {}
@@ -67,17 +69,17 @@ async function fetchJson<T>(url: string, what: string, signal: AbortSignal): Pro
     // no-cache: revalidate with the server, so a new snapshot shows up without a hard reload.
     response = await fetch(url, { cache: 'no-cache', signal })
   } catch (error) {
-    if (isCancelled(error)) throw error
+    if (signal.aborted && !timedOut(signal)) throw error
     console.warn(`[MarketData] couldn't fetch ${url}:`, error)
-    throw new Error(isTimeout(error) ? TIMEOUT_MESSAGE : 'Network error', { cause: error })
+    throw new Error(timedOut(signal) ? TIMEOUT_MESSAGE : 'Network error', { cause: error })
   }
   if (!response.ok) throw new HttpError(response.status, response.statusText)
   try {
     return (await response.json()) as T
   } catch (error) {
-    if (isCancelled(error)) throw error
-    // The timeout signal also covers reading the body.
-    if (isTimeout(error)) {
+    if (signal.aborted && !timedOut(signal)) throw error
+    // The timeout also covers reading the body.
+    if (timedOut(signal)) {
       console.warn(`[MarketData] ${url} took too long to download:`, error)
       throw new Error(TIMEOUT_MESSAGE, { cause: error })
     }
@@ -101,6 +103,7 @@ async function fetchSnapshot(url: string, signal: AbortSignal): Promise<MarketSn
  * Runs `load` once per `key`, exposing loading/error/ready and a retry that
  * reruns it. `load` gets a signal that aborts after FETCH_TIMEOUT_MS, or when
  * the caller unmounts or the key changes, so a stale request doesn't keep running.
+ * One controller and a timer, not AbortSignal.any/timeout, which older browsers lack.
  */
 function useLoad<T>(key: string, load: (signal: AbortSignal) => Promise<T>): { state: LoadState<T>; retry: () => void } {
   const [state, setState] = useState<LoadState<T>>({ status: 'loading' })
@@ -109,13 +112,18 @@ function useLoad<T>(key: string, load: (signal: AbortSignal) => Promise<T>): { s
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
-    load(AbortSignal.any([controller.signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])).then(
+    const timer = setTimeout(
+      () => controller.abort(new DOMException('The load took too long', 'TimeoutError')),
+      FETCH_TIMEOUT_MS,
+    )
+    load(controller.signal).then(
       (data) => !cancelled && setState({ status: 'ready', data }),
       (error: unknown) =>
         !cancelled && setState({ status: 'error', message: error instanceof Error ? error.message : String(error) }),
     )
     return () => {
       cancelled = true
+      clearTimeout(timer)
       controller.abort()
     }
     // Keyed by `key`, not `load`: callers pass a new function each render.
