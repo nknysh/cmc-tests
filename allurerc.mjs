@@ -14,9 +14,9 @@ const minTestsCount = {
   api: 43,
   contract: 36,
   // CoinBoard UI tests (tests/coinboard), one per test case in app/user-stories.
-  coinboard: 100,
+  coinboard: 134,
   // Blocker + critical CoinBoard UI tests, run on app changes by coinboard-smoke-tests.yml.
-  'coinboard-smoke': 22,
+  'coinboard-smoke': 44,
   // One result per k6 threshold.
   perf: 7,
 }

@@ -3,6 +3,7 @@ import type { Page, TestInfo } from '@playwright/test'
 import type { MarketSnapshot } from '../../app/src/data/types'
 import { fixtureSnapshot } from './data/snapshot'
 import { DOM_SNAPSHOT_ATTACHMENT, DOM_SNAPSHOT_MAX_LENGTH, serializeElement } from './domSnapshot.mts'
+import { AppShell } from './pages/AppShell'
 import { CoinPage } from './pages/CoinPage'
 import { ComparePage } from './pages/ComparePage'
 import { ConverterPage } from './pages/ConverterPage'
@@ -21,6 +22,7 @@ interface CoinBoardFixtures {
    * Any other uncaught page error or `console.error` fails the test.
    */
   expectedBrowserErrors: RegExp[]
+  appShell: AppShell
   comparePage: ComparePage
   coinPage: CoinPage
   converterPage: ConverterPage
@@ -67,6 +69,9 @@ export const test = base.extend<CoinBoardFixtures>({
       await page.unroute(LATEST_SNAPSHOT_URL)
       await page.route(LATEST_SNAPSHOT_URL, (route) => route.fulfill({ json: snapshot }))
     })
+  },
+  appShell: async ({ page }, use) => {
+    await use(new AppShell(page))
   },
   comparePage: async ({ page }, use) => {
     await use(new ComparePage(page))
