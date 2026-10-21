@@ -359,7 +359,7 @@ test.describe('APP-03: Market data load failure can be retried', { tag: ['@app-s
     await test.step('open /', async () => {
       await appShell.goto('#/')
       await expect(appShell.heading).toHaveText(MARKETS_HEADING)
-      expect(latestRequests()).toBe(1)
+      await expect.poll(latestRequests).toBe(1)
     })
 
     await test.step('visit every section', async () => {
@@ -386,7 +386,7 @@ test.describe('APP-03: Market data load failure can be retried', { tag: ['@app-s
     await test.step('reload the page', async () => {
       await page.reload()
       await expect(appShell.heading).toHaveText('Bitcoin BTC')
-      expect(latestRequests()).toBe(2)
+      await expect.poll(latestRequests).toBe(2)
     })
   })
 
@@ -562,7 +562,9 @@ async function runSnapshotScript(fetchStub: string, outDir: string, env: Record<
     const { stdout, stderr } = await execFileAsync(TSX_BIN, args, { env: { ...process.env, ...env } })
     return { code: 0, output: `${stdout}${stderr}` }
   } catch (error) {
-    const failed = error as { code?: number; stdout?: string; stderr?: string }
-    return { code: failed.code ?? 1, output: `${failed.stdout ?? ''}${failed.stderr ?? ''}` }
+    // `code` is the exit code, or a string such as 'ENOENT' when the script couldn't be started.
+    const failed = error as { code?: number | string; message?: string; stdout?: string; stderr?: string }
+    const code = typeof failed.code === 'number' ? failed.code : 1
+    return { code, output: `${failed.stdout ?? ''}${failed.stderr ?? ''}${failed.message ?? ''}` }
   }
 }
