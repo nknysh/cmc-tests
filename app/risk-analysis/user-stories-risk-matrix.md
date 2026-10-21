@@ -11,11 +11,11 @@ Risk analysis of the 38 user stories in [`app/user-stories/`](../user-stories/RE
 
 | Impact ↓ / Probability → | **1 – Rare** | **2 – Unlikely** | **3 – Possible** | **4 – Likely** | **5 – Highly likely** |
 |---|---|---|---|---|---|
-| **5 – Critical** | | MKT-04 | | 🔴 APP-06 | 🔴 APP-03 |
-| **4 – High** | APP-01 | COIN-01, PRT-04 | ✅ CNV-01, MKT-06, MKT-14, MKT-17, PRT-01 | 🔴 PRT-05 | 🔴 MKT-15 |
-| **3 – Medium** | | ✅ CMP-01, ✅ CMP-02, PRT-03 | MKT-01, MKT-05, MKT-10, PRT-02 | APP-02 | COIN-02 |
-| **2 – Low** | | APP-04, ✅ CMP-03, ✅ CNV-02, MKT-02, MKT-07, MKT-12, MKT-13, COIN-03 | MKT-03, MKT-08, MKT-11, MKT-16 | MKT-09 | |
 | **1 – Minimal** | APP-05, COIN-04, COIN-05 | | | | |
+| **2 – Low** | | APP-04, ✅ CMP-03, ✅ CNV-02, MKT-02, MKT-07, MKT-12, MKT-13, COIN-03 | MKT-03, MKT-08, MKT-11, MKT-16 | MKT-09 | |
+| **3 – Medium** | | ✅ CMP-01, ✅ CMP-02, PRT-03 | MKT-01, MKT-05, MKT-10, PRT-02 | APP-02 | COIN-02 |
+| **4 – High** | APP-01 | COIN-01, PRT-04 | ✅ CNV-01, MKT-06, MKT-14, MKT-17, PRT-01 | 🔴 PRT-05 | 🔴 MKT-15 |
+| **5 – Critical** | | MKT-04 | | 🔴 APP-06 | 🔴 APP-03 |
 
 ## Ratings
 
