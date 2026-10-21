@@ -1,6 +1,6 @@
 # cmc-tests
 
-Automated API, contract, performance and end-to-end tests for [CoinMarketCap](https://coinmarketcap.com), written in TypeScript with Playwright and k6. Results from every run are reported to Allure and published on GitHub Pages.
+Automated API, contract and performance tests for the [CoinMarketCap](https://coinmarketcap.com) API, and end-to-end tests for the [CoinBoard](#coinboard-demo-app) demo app, written in TypeScript with Playwright. Results from every run are reported to Allure and published on GitHub Pages.
 
 ## CoinBoard demo app
 
