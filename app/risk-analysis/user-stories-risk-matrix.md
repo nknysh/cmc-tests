@@ -62,7 +62,7 @@ Risk analysis of the 38 user stories in [`app/user-stories/`](../user-stories/RE
 
 ## Takeaways
 
-- The riskiest stories have no tests. Automated coverage (CMP-01 to CMP-03, CNV-01, CNV-02) sits in the medium and low zones, while APP-03, APP-06, MKT-15, PRT-05 and COIN-02 have neither test cases nor specs.
+- The riskiest stories have no tests. Automated coverage (CMP-01 to CMP-03, CNV-01, CNV-02) sits in the medium and low zones, while APP-06, MKT-15, PRT-05 and COIN-02 have neither test cases nor specs. APP-03 has test cases (2026-10-21) but no spec yet.
 - COIN-02/AC-11 is still open: price history that is valid JSON but the wrong shape isn't caught. APP-03/AC-7 had the same problem for the market snapshot and was fixed with a shape check (`app/src/data/snapshotShape.ts`). The same approach would fit the price history.
 - Malformed data in browser storage blanks the page (cross-cutting open question in the user stories README). It affects APP-04, MKT-10, MKT-13 and PRT-01 to PRT-03, so one shared test would cover all of them.
 - Suggested order for new test cases and automation: APP-03 → APP-06 → MKT-15 → PRT-05 → COIN-02 → MKT-04 and MKT-14.
