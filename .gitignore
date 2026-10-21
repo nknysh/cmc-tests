@@ -13,6 +13,7 @@ perf-results/
 .agents/shared/models/
 data/*.db
 .playwright-mcp/
+app/test-reports/
 
 # Claude Code local settings
 .claude/settings.local.json
