@@ -21,7 +21,7 @@ Risk analysis of the 38 user stories in [`app/user-stories/`](../user-stories/RE
 
 | Story | Impact | Probability | Score | Why |
 |---|---|---|---|---|
-| APP-03 Market data load failure can be retried | 5 | 5 | 25 | Every section depends on the data load. Known gap: valid JSON that isn't a snapshot leaves the page blank (AC-7). |
+| APP-03 Market data load failure can be retried | 5 | 5 | 25 | Every section depends on the data load. The AC-7 gap (valid JSON that isn't a snapshot left the page blank) was fixed on 2026-10-21. |
 | APP-06 Snapshots with invalid prices are rejected | 5 | 4 | 20 | A bug puts wrong prices into every section and chart. The fallback chain spans the deploy script and the app: previous snapshot, red marking, "no data". |
 | MKT-15 Market view can be shared as a link | 4 | 5 | 20 | All Markets state (search, sort, filters, page) lives in the URL, so one bug breaks all of it. Fallback rules for bad values, back/forward handling, React Router transitions (a checkbox revert already had to be worked around), open question on sort direction. |
 | PRT-05 Portfolio total and 24h change are correct | 4 | 4 | 16 | Shows the user's money. The 24h value is worked out backwards by dividing by (1 + change), with special cases for zero sums and the sign. |
@@ -63,6 +63,6 @@ Risk analysis of the 38 user stories in [`app/user-stories/`](../user-stories/RE
 ## Takeaways
 
 - The riskiest stories have no tests. Automated coverage (CMP-01 to CMP-03, CNV-01, CNV-02) sits in the medium and low zones, while APP-03, APP-06, MKT-15, PRT-05 and COIN-02 have neither test cases nor specs.
-- APP-03/AC-7 and COIN-02/AC-11 are the same open problem: data that is valid JSON but the wrong shape isn't caught.
+- COIN-02/AC-11 is still open: price history that is valid JSON but the wrong shape isn't caught. APP-03/AC-7 had the same problem for the market snapshot and was fixed with a shape check (`app/src/data/snapshotShape.ts`). The same approach would fit the price history.
 - Malformed data in browser storage blanks the page (cross-cutting open question in the user stories README). It affects APP-04, MKT-10, MKT-13 and PRT-01 to PRT-03, so one shared test would cover all of them.
 - Suggested order for new test cases and automation: APP-03 → APP-06 → MKT-15 → PRT-05 → COIN-02 → MKT-04 and MKT-14.

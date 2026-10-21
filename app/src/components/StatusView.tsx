@@ -20,6 +20,19 @@ export function NoMarketData() {
   )
 }
 
+/** A section that failed to draw (APP-03/AC-9). Retry reloads the market data and draws it again. */
+export function PageError({ onRetry }: Readonly<{ onRetry: () => void }>) {
+  return (
+    <div className="error-panel" role="alert">
+      <h2>Something went wrong</h2>
+      <p className="muted">This page couldn't be shown.</p>
+      <button type="button" onClick={onRetry} data-testid="retry-button">
+        Retry
+      </button>
+    </div>
+  )
+}
+
 export function LoadError({ message, onRetry, what = 'market data' }: Readonly<{ message: string; onRetry: () => void; what?: string }>) {
   return (
     <div className="error-panel" role="alert">

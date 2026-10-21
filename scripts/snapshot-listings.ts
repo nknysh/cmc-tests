@@ -2,11 +2,13 @@ import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { CoinMarketCapClient, RateLimiter, type ListingEntry } from '../src/clients/coinmarketcap'
 import type { Coin, MarketSnapshot, PriceHistory } from '../app/src/data/types'
+import { snapshotProblem } from '../app/src/data/snapshotShape'
 import { findInvalidPrices } from '../app/src/data/validate'
 
 /**
  * Writes the CoinBoard app's data files from one listings/latest call (1
- * credit for 100 coins), but only when every coin's price is above 0 (APP-06):
+ * credit for 100 coins), but only when the snapshot has the shape the app
+ * accepts (APP-03/AC-7) and every coin's price is above 0 (APP-06):
  * - `latest.json`: the current top coins as a MarketSnapshot.
  * - `history.json`: the previous history plus this snapshot's prices, trimmed
  *   to a rolling HISTORY_WINDOW_MS, for the coin page's price chart.
@@ -15,9 +17,10 @@ import { findInvalidPrices } from '../app/src/data/validate'
  *   published latest.json has an invalid price anyway (e.g. a manual edit).
  *   Only this script writes them, so an unconfirmed file never becomes one.
  *
- * A snapshot with any price of 0 or below is rejected whole: nothing is
- * written, the rejection is logged, and the run still succeeds, so the last
- * accepted snapshot stays published and no other alert is raised. On GitHub
+ * A snapshot that's malformed or has any price of 0 or below is rejected
+ * whole: nothing is written, the rejection is logged, and the run still
+ * succeeds, so the last accepted snapshot stays published and no other alert
+ * is raised. On GitHub
  * Actions, the step output `accepted` is `true` or `false`.
  *
  * Usage: tsx scripts/snapshot-listings.ts [outDir] [previousHistoryPath]
@@ -101,6 +104,15 @@ async function main(): Promise<void> {
   })
 
   const snapshot: MarketSnapshot = { updatedAt: timestamp, coins: entries.map(toCoin) }
+
+  const problem = snapshotProblem(snapshot)
+  if (problem) {
+    console.log(
+      `[snapshot-listings] rejected the snapshot taken at ${snapshot.updatedAt}: it isn't a valid market snapshot (${problem}). Nothing was written; the last accepted snapshot stays published.`,
+    )
+    await setAcceptedOutput(false)
+    return
+  }
 
   const invalid = findInvalidPrices(snapshot)
   if (invalid.length > 0) {

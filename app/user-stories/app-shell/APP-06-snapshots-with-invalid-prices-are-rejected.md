@@ -13,7 +13,7 @@
 - A snapshot whose prices are all above 0, however small, is accepted as usual. `AC-5`
 - A rejection is written to the daily update's log; no other alert is raised. `AC-6`
 - The app can also load a previous snapshot and its price history, published next to the latest one. The previous snapshot is replaced only after a newer snapshot is confirmed to have every price above 0; until then it is kept as it is. A file that wasn't confirmed (e.g. a manual edit) never becomes the previous snapshot. `AC-7`
-- If the published snapshot has a price of 0 or below anyway (e.g. after a manual edit), the app loads the previous snapshot and its price history instead, on every visit, so the user sees no update: no page shows the invalid file's data, including the price chart, and the header shows the previous snapshot's age (APP-02). `AC-8`
+- If the published snapshot has a price of 0 or below anyway (e.g. after a manual edit), or is corrupt (APP-03/AC-7), the app loads the previous snapshot and its price history instead, on every visit, so the user sees no update: no page shows the invalid file's data, including the price chart, and the header shows the previous snapshot's age (APP-02). `AC-8`
 - When the app falls back to the previous snapshot, it writes this to the browser console. `AC-9`
 - If the app would fall back (AC-8) but there is no previous snapshot (e.g. on the first deploy), every page shows that no market data is available, and no coin data, totals or charts are shown. `AC-10`
 - If the previous snapshot itself has a price of 0 or below (e.g. it was edited by hand), the app shows it, but each price of 0 or below is shown in red with an indicator that the price isn't valid. Prices above 0 are shown as usual. `AC-11`

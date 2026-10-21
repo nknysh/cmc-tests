@@ -1,5 +1,6 @@
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { useMarketData } from './data/MarketData'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { FreshnessBadge } from './components/FreshnessBadge'
 import { LoadError, LoadingSkeleton, NoMarketData } from './components/StatusView'
 import { ThemeToggle } from './components/ThemeToggle'
@@ -19,6 +20,7 @@ const NAV = [
 
 export function App() {
   const { state, retry } = useMarketData()
+  const { pathname } = useLocation()
 
   return (
     <>
@@ -47,14 +49,16 @@ export function App() {
         {state.status === 'error' && <LoadError message={state.message} onRetry={retry} />}
         {state.status === 'ready' && !state.data && <NoMarketData />}
         {state.status === 'ready' && state.data && (
-          <Routes>
-            <Route path="/" element={<MarketsPage />} />
-            <Route path="/coin/:slug" element={<CoinPage />} />
-            <Route path="/converter" element={<ConverterPage />} />
-            <Route path="/compare" element={<ComparePage />} />
-            <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          <ErrorBoundary resetKey={pathname} onRetry={retry}>
+            <Routes>
+              <Route path="/" element={<MarketsPage />} />
+              <Route path="/coin/:slug" element={<CoinPage />} />
+              <Route path="/converter" element={<ConverterPage />} />
+              <Route path="/compare" element={<ComparePage />} />
+              <Route path="/portfolio" element={<PortfolioPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </ErrorBoundary>
         )}
       </main>
       <footer className="site-footer">
