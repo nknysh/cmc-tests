@@ -167,7 +167,9 @@ async function loadMarketData(signal: AbortSignal): Promise<MarketData | null> {
   const latest = await loadLatest(signal)
   if (typeof latest !== 'string') return { snapshot: latest, historyUrl: DATA_URLS.history }
 
-  console.warn(`[MarketData] latest.json ${latest}; showing the previous snapshot instead`)
+  // The reason quotes coin symbols from the file: strip line breaks so they can't forge log lines.
+  const reason = latest.replaceAll(/[\r\n\t]/g, ' ')
+  console.warn(`[MarketData] latest.json ${reason}; showing the previous snapshot instead`)
   try {
     const previous = await fetchSnapshot(DATA_URLS.previous, signal)
     return { snapshot: previous, historyUrl: DATA_URLS.previousHistory }
